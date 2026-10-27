@@ -1,0 +1,29 @@
+[
+  {
+    "id": "gridline",
+    "name": "Gridline",
+    "repo": "https://github.com/bollineni-create/hotwheels.git",
+    "files": ["index.html", "css", "js", "assets"],
+    "icon": "assets/icons/icon.svg",
+    "kind": "Car deals · live market",
+    "pitch": "Type your ZIP. See the best car deals around you, and the ones worth the drive.",
+    "chips": ["Live listings", "Fair value on every car", "Market map"],
+    "tint": "#34D399",
+    "wash": "#0B2A22",
+    "hostedConfig": { "global": "gridlineDesktop", "keys": { "autodev": "AUTODEV_KEY", "visor": "VISOR_KEY" } }
+  },
+  {
+    "id": "palimpsest",
+    "name": "Palimpsest",
+    "repo": "https://github.com/bollineni-create/palimpsest.git",
+    "files": ["index.html", "art.html", "philosophy.html", "compare.html", "css", "js", "assets"],
+    "icon": "assets/icon.png",
+    "iconStyle": "transform: translateY(-1.4%) scale(1.17)",
+    "kind": "Time travel · 3D globe",
+    "pitch": "A journey through time on a 3D globe, from the Big Bang to yesterday. Drag the timeline and the world changes with it.",
+    "chips": ["13.8 billion years", "Borders for every era", "Ask the guide"],
+    "tint": "#F08A5D",
+    "wash": "#331A0F",
+    "ownsEsc": true
+  }
+]

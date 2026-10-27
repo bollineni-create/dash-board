@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>bollineni-create</title>
+<meta name="description" content="Apps by bollineni-create: {{APP_NAMES}}.">
+<meta name="theme-color" content="#0B0F1E">
+<link rel="icon" href="{{FAVICON}}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* A console home screen. The selected app sets the whole scene: its colour washes the
+   background, its name and pitch fill the left, and on the right sits the app itself,
+   already loaded and running, as a live card. Start zooms that card to full screen. */
+:root {
+  --night: #070A14;
+  --deep: #111628;
+  --ink: #F1F4FF;
+  --muted: #A2ACC8;
+  --chip: rgb(255 255 255 / .07);
+  --line: rgb(255 255 255 / .13);
+  --tint: #7FA7FF;          /* the selected app's accent */
+  --wash: #101a3a;          /* the selected app's background wash */
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.32,.72,0,1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--night); color: var(--ink); font-family: var(--display); overflow: hidden; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--tint); outline-offset: 4px; }
+
+#waves { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.ambient { position: fixed; inset: 0; pointer-events: none; transition: background 1s ease;
+  background: radial-gradient(70% 70% at var(--mx, 70%) var(--my, 40%), color-mix(in srgb, var(--wash) 90%, transparent), transparent 70%),
+              radial-gradient(120% 90% at 50% 120%, color-mix(in srgb, var(--tint) 16%, transparent), transparent 60%); }
+.grain { position: fixed; inset: 0; pointer-events: none; opacity: .06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+.status { position: fixed; top: 0; left: 0; right: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) 0 max(24px, env(safe-area-inset-left, 0px));
+  font-family: var(--mono); font-size: 13px; color: var(--muted); letter-spacing: .04em; }
+.status .who { color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: .01em; display: flex; align-items: center; gap: 10px; }
+.status .who i { width: 9px; height: 9px; border-radius: 50%; background: var(--tint); box-shadow: 0 0 12px var(--tint); transition: background .6s, box-shadow .6s; }
+.status .right { display: flex; gap: 14px; align-items: center; }
+.batt { width: 26px; height: 12px; border: 1.5px solid var(--muted); border-radius: 3px; position: relative; }
+.batt::before { content: ""; position: absolute; inset: 1.5px; right: 5px; background: var(--muted); border-radius: 1px; }
+.batt::after { content: ""; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: var(--muted); border-radius: 0 1px 1px 0; }
+
+/* layout: the icon shelf on top, the pitch on the left, the live card on the right */
+.home { position: fixed; inset: 0; z-index: 2; display: grid; gap: clamp(20px, 4vh, 44px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "shelf shelf" "hero slot"; align-items: center;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-left, 0px)); }
+@media (max-width: 760px) {
+  .home { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: "shelf" "slot" "hero"; align-content: start; gap: 22px; overflow-y: auto; }
+}
+.shelf { grid-area: shelf; display: flex; gap: 18px; align-items: flex-end; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  padding: 40px 16px; margin: -40px -16px; }
+.shelf::-webkit-scrollbar { display: none; }
+.app { flex: none; background: none; border: 0; padding: 0; cursor: pointer; display: grid; justify-items: center; gap: 10px; }
+.icon { width: 64px; aspect-ratio: 1; border-radius: 24%; overflow: hidden; position: relative; opacity: .62;
+  box-shadow: 0 10px 24px rgb(0 0 0 / .45), 0 0 0 1px rgb(255 255 255 / .08);
+  transition: width .45s var(--ease), opacity .3s, box-shadow .45s; }
+.icon img { width: 100%; height: 100%; display: block; }
+.app .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); opacity: 0; transform: translateY(-4px); transition: opacity .3s, transform .3s; }
+.app:hover .icon { opacity: .9; }
+.app.sel .icon { width: 92px; opacity: 1; box-shadow: 0 18px 40px rgb(0 0 0 / .5), 0 0 0 3px var(--tint), 0 0 36px color-mix(in srgb, var(--tint) 55%, transparent); }
+.app.sel .lbl { opacity: 1; transform: none; color: var(--ink); }
+.app:focus-visible { outline: none; }
+.app:focus-visible .icon { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+.hero { grid-area: hero; display: grid; gap: 18px; align-content: center; min-width: 0; max-width: 560px; }
+.kind { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--tint); transition: color .6s; }
+.hero h1 { margin: 0; font-weight: 800; font-size: clamp(44px, 7.4vw, 112px); line-height: .92; letter-spacing: -.035em; text-wrap: balance; }
+.hero p { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: clamp(15px, 1.3vw, 18px); line-height: 1.5; color: var(--muted); max-width: 46ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; padding: 5px 10px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: center; margin-top: 6px; }
+.start { border: 0; border-radius: 999px; padding: 14px 28px; font-weight: 800; font-size: 17px; cursor: pointer; background: var(--ink); color: var(--night);
+  display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px color-mix(in srgb, var(--tint) 35%, transparent); transition: transform .2s, box-shadow .3s; }
+.start:hover { transform: translateY(-1px) scale(1.02); }
+.start svg { width: 14px; height: 14px; }
+.ghost { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 2px; }
+.ghost:hover { color: var(--ink); }
+/* swap animation for the pitch when the selection changes */
+.hero.swap > * { animation: rise .5s var(--ease) both; }
+.hero.swap > :nth-child(2) { animation-delay: .03s; } .hero.swap > :nth-child(3) { animation-delay: .06s; } .hero.swap > :nth-child(4) { animation-delay: .09s; } .hero.swap > :nth-child(5) { animation-delay: .12s; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.slot { grid-area: slot; justify-self: end; align-self: center; width: min(100%, calc((100vh - 230px) * var(--var, 1.6))); aspect-ratio: var(--va, 16 / 10); }
+@media (max-width: 760px) { .slot { justify-self: center; width: min(100%, calc((100dvh - 450px) * var(--var, .5))); min-width: min(170px, 100%); } .home { gap: 16px; } .shelf { margin-bottom: -28px; } .hero h1 { font-size: 46px; } .hero { gap: 10px; } .chips { display: none; } .icon { width: 50px; } .app.sel .icon { width: 68px; } .app .lbl { display: none; } .status #clock .d { display: none; } }
+.card-hit { position: fixed; z-index: 7; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 20px; }
+.card-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; }
+.reflect { position: fixed; z-index: 1; pointer-events: none; border-radius: 50%; filter: blur(40px); opacity: .55;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 45%, transparent), transparent); }
+
+.hint { position: fixed; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; z-index: 3; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .05em; }
+.hint kbd { font-family: inherit; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; margin: 0 2px; }
+@media (max-width: 760px) and (max-height: 700px) { .home { padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); } }
+/* Short landscape (folded iPhone Duo on its side, phones in landscape): card and text side by side, no scrolling. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .home { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "shelf shelf" "hero slot"; align-content: stretch; gap: 10px 24px; overflow: hidden;
+    padding-top: calc(50px + env(safe-area-inset-top, 0px)); padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+  .slot { justify-self: end; align-self: center; width: min(100%, calc((100dvh - 150px) * var(--var, 1.6))); min-width: 0; }
+  .hero { gap: 8px; align-content: center; }
+  .hero h1 { font-size: clamp(30px, 9vh, 46px); }
+  .hero p { font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .chips { display: none; } .kind { font-size: 11px; }
+  .start { padding: 10px 22px; font-size: 15px; }
+  .shelf { margin-bottom: -30px; } .icon { width: 42px; } .app.sel .icon { width: 54px; } .app .lbl { display: none; }
+}
+@media (max-width: 760px), (pointer: coarse) { .hint { display: none; } }
+
+.home, .status, .hint, .reflect { transition: transform .55s var(--ease), opacity .4s ease, filter .55s ease; }
+body.app-open .home, body.app-open .status, body.app-open .hint, body.app-open .reflect { transform: scale(.94); opacity: 0; filter: blur(8px); pointer-events: none; }
+body.app-open .card-hit { display: none; }
+
+/* The app window. At home it's shrunk with a transform onto the card slot (so the app inside
+   keeps its full-screen layout and just looks smaller); Start removes the transform. */
+.window { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 6; background: var(--deep); display: flex; flex-direction: column;
+  overflow: hidden; transform-origin: 0 0; transform: var(--card, none); border-radius: var(--card-r, 0px);
+  box-shadow: 0 40px 120px rgb(0 0 0 / .55), 0 0 0 1px rgb(255 255 255 / .1);
+  transition: transform .6s var(--ease), border-radius .6s var(--ease), box-shadow .6s; will-change: transform; }
+.window.preview { pointer-events: none; }
+.window.instant { transition: none; }
+body.app-open .window { box-shadow: none; }
+.bar { position: relative; z-index: 5; display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); background: var(--deep); border-bottom: 1px solid var(--line); }
+.bar img { width: 22px; height: 22px; border-radius: 6px; }
+.bar .t { font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nt-short { display: none; }
+@media (max-width: 520px) { .nt-long { display: none; } .nt-short { display: inline; font-size: 15px; line-height: 1; } }
+.bar .sp { flex: 1; }
+.bar { touch-action: pan-y; }
+.dots { display: flex; gap: 2px; align-items: center; }
+.dots button { width: 22px; height: 28px; border: 0; padding: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+.dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); opacity: .45; transition: width .3s var(--ease), opacity .3s, background .3s; }
+.dots button[aria-current="true"]::before { width: 18px; border-radius: 4px; opacity: 1; background: var(--tint); }
+.dots:has(button:only-child) { display: none; }
+.pill { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 6px 14px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; cursor: pointer; text-decoration: none; color: var(--ink); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.pill:hover { border-color: var(--tint); }
+.frames { flex: 1; position: relative; min-height: 0; }
+iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility 0s .35s; }
+iframe.active { opacity: 1; visibility: visible; transition: opacity .35s ease, visibility 0s; }
+.splash { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: var(--wash); transition: opacity .35s ease, background .6s; pointer-events: none; }
+.splash img { width: 96px; height: 96px; border-radius: 24%; box-shadow: 0 12px 30px rgb(0 0 0 / .35); animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(.94); opacity: .8; } }
+.splash.gone { opacity: 0; }
+.splash.gone img { animation: none; }
+
+/* first visit: a short boot */
+.boot { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--night); pointer-events: none; animation: bootout .5s ease 1.25s both; }
+.boot b { font-weight: 800; font-size: clamp(28px, 5vw, 52px); letter-spacing: -.02em; opacity: 0; animation: bootin .7s var(--ease) .15s both; }
+.boot b::after { content: ""; display: block; height: 3px; margin-top: 12px; border-radius: 3px; background: linear-gradient(90deg, #34D399, #7FA7FF, #F08A5D); transform-origin: left; animation: bootbar .8s var(--ease) .4s both; }
+@keyframes bootin { from { opacity: 0; transform: translateY(10px); letter-spacing: .1em; } to { opacity: 1; transform: none; } }
+@keyframes bootbar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes bootout { to { opacity: 0; visibility: hidden; } }
+body:not(.booting) .boot { display: none; }
+body.booting .shelf .app { animation: drop .6s var(--ease) both; }
+body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
+@keyframes drop { from { opacity: 0; transform: translateY(-16px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .window, .icon, .splash, .home, .status, .hint, .reflect, iframe, .ambient { transition: none !important; }
+  .hero.swap > *, .splash img, body.booting .shelf .app { animation: none !important; }
+  .boot { display: none !important; }
+}
+</style>
+</head>
+<body>
+<canvas id="waves" aria-hidden="true"></canvas>
+<div class="ambient"></div>
+<div class="grain" aria-hidden="true"></div>
+<div class="reflect" id="reflect" aria-hidden="true"></div>
+<div class="boot" aria-hidden="true"><b>bollineni-create</b></div>
+
+<header class="status">
+  <span class="who"><i></i>bollineni-create</span>
+  <span class="right"><span id="clock">--:--</span><span class="batt" aria-hidden="true"></span></span>
+</header>
+
+<main class="home" id="home">
+  <nav class="shelf" id="shelf" aria-label="Apps"></nav>
+  <section class="hero" id="hero" aria-live="polite">
+    <div class="kind" id="kind"></div>
+    <h1 id="title"></h1>
+    <p id="pitch"></p>
+    <div class="chips" id="chips"></div>
+    <div class="actions">
+      <button class="start" id="start" type="button"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg>Start</button>
+      <a class="ghost" id="ghost" target="_blank" rel="noopener">Open in a new tab</a>
+    </div>
+  </section>
+  <div class="slot" id="slot" aria-hidden="true"></div>
+</main>
+<button class="card-hit" id="cardHit" type="button" aria-label="Open the app"></button>
+<div class="hint"><kbd>←</kbd><kbd>→</kbd> choose · <kbd>Enter</kbd> start · <kbd>Esc</kbd> home · swipe the top bar to switch apps</div>
+
+<section class="window preview" id="win" aria-label="App" aria-hidden="true">
+  <div class="bar">
+    <button class="pill" id="homeBtn" type="button" title="Back to the launcher (Esc)" tabindex="-1">← Launcher</button>
+    <img id="winIcon" alt=""><span class="t" id="winName"></span>
+    <span class="sp"></span>
+    <nav class="dots" id="dots" aria-label="Switch app"></nav>
+    <a class="pill" id="newTab" target="_blank" rel="noopener" tabindex="-1" aria-label="Open in a new tab"><span class="nt-long">Open in new tab</span><span class="nt-short" aria-hidden="true">↗</span></a>
+  </div>
+  <div class="frames" id="frames"></div>
+  <div class="splash" id="splash"><img id="splashIcon" alt=""></div>
+</section>
+
+<script>
+(function () {
+  // Written in by build.mjs from apps.json. ownsEsc: the app uses Esc itself, so Esc inside it stays with the app.
+  var LIST = /*APPS*/[];
+  var APPS = {}, order = LIST.map(function (a) { APPS[a.id] = a; return a.id; });
+  var reducedMQ = matchMedia('(prefers-reduced-motion: reduce)');
+  var fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  var root = document.documentElement;
+  var shelfEl = document.getElementById('shelf'), dotsEl = document.getElementById('dots');
+  var buttons = LIST.map(function (a, i) {
+    var b = document.createElement('button'), ic = document.createElement('span'), img = document.createElement('img'), lbl = document.createElement('span');
+    b.className = 'app'; b.type = 'button'; b.dataset.app = a.id; b.style.setProperty('--i', i);
+    ic.className = 'icon'; img.src = a.icon; img.alt = ''; if (a.iconStyle) img.style.cssText = a.iconStyle;
+    lbl.className = 'lbl'; lbl.textContent = a.name;
+    ic.appendChild(img); b.append(ic, lbl); shelfEl.appendChild(b);
+    return b;
+  });
+  var dots = LIST.map(function (a) {
+    var d = document.createElement('button'); d.type = 'button'; d.tabIndex = -1; d.setAttribute('aria-label', a.name);
+    d.addEventListener('click', function () { if (open && open !== a.id) switchTo(a.id); });
+    dotsEl.appendChild(d); return d;
+  });
+  var $ = function (id) { return document.getElementById(id); };
+  var win = $('win'), framesEl = $('frames'), splash = $('splash'), slot = $('slot');
+  var cardHit = $('cardHit'), reflect = $('reflect'), heroEl = $('hero');
+  var sel = null, open = null, busy = false, pushed = false;
+  var DUR = 600;
+
+  // Each app gets one iframe, made the first time it's needed and kept afterwards, so the
+  // card shows the real app already running and Start only has to zoom it up.
+  var frames = {};
+  function warm(id) {
+    if (frames[id] || !APPS[id]) return frames[id];
+    var a = APPS[id], fr = { el: document.createElement('iframe'), loaded: false, waiters: [] };
+    fr.el.title = a.name; fr.el.referrerPolicy = 'no-referrer'; fr.el.allow = 'clipboard-write';
+    fr.el.tabIndex = -1;
+    fr.el.addEventListener('load', function () {
+      fr.loaded = true;
+      if (sel === id) splash.classList.add('gone');
+      fr.waiters.splice(0).forEach(function (fn) { fn(); });
+      // Esc inside the app also goes home (works for apps served from this site).
+      if (!a.ownsEsc) try { fr.el.contentWindow.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !e.defaultPrevented && open === id) home(); }); } catch (err) { /* another origin */ }
+    }, { once: true });
+    fr.el.src = a.url;
+    framesEl.appendChild(fr.el);
+    return (frames[id] = fr);
+  }
+
+  // Map the full-screen window onto the card slot with one transform.
+  function placeCard() {
+    root.style.setProperty('--va', innerWidth + ' / ' + innerHeight);
+    root.style.setProperty('--var', String(innerWidth / innerHeight));
+    var r = slot.getBoundingClientRect(), s = r.width / innerWidth, ch = r.width * innerHeight / innerWidth;
+    root.style.setProperty('--card', 'translate(' + r.left + 'px,' + r.top + 'px) scale(' + s + ')');
+    root.style.setProperty('--card-r', (20 / s) + 'px');
+    Object.assign(cardHit.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: ch + 'px' });
+    Object.assign(reflect.style, { left: (r.left + r.width * .1) + 'px', top: (r.top + ch * .85) + 'px', width: (r.width * .8) + 'px', height: (r.width * .25) + 'px' });
+  }
+
+  function select(id, opts) {
+    if (!APPS[id] || (sel === id && !(opts && opts.force))) return;
+    sel = id;
+    var a = APPS[id];
+    buttons.forEach(function (b) { var on = b.dataset.app === id; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on); if (on && b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reducedMQ.matches ? 'auto' : 'smooth' }); });
+    dots.forEach(function (d, i) { d.setAttribute('aria-current', order[i] === id); });
+    root.style.setProperty('--tint', a.tint);
+    root.style.setProperty('--wash', a.wash);
+    $('kind').textContent = a.kind; $('title').textContent = a.name; $('pitch').textContent = a.pitch;
+    $('chips').innerHTML = ''; a.chips.forEach(function (c) { var s = document.createElement('span'); s.textContent = c; $('chips').appendChild(s); });
+    $('ghost').href = a.url; $('start').setAttribute('aria-label', 'Start ' + a.name); cardHit.setAttribute('aria-label', 'Open ' + a.name);
+    heroEl.classList.remove('swap'); void heroEl.offsetWidth; heroEl.classList.add('swap');
+    $('winIcon').src = a.icon; $('winName').textContent = a.name; $('newTab').href = a.url;
+    $('splashIcon').src = a.icon;
+    var fr = warm(id);
+    Object.keys(frames).forEach(function (k) { frames[k].el.classList.toggle('active', k === id); });
+    splash.classList.toggle('gone', fr.loaded);
+    if (fr.loaded) warmNeighbours(); else fr.waiters.push(warmNeighbours);
+  }
+
+  buttons.forEach(function (b) {
+    var id = b.dataset.app;
+    if (fine) b.addEventListener('mouseenter', function () { if (!open) select(id); });
+    b.addEventListener('focus', function () { if (!open) select(id); });
+    // With a mouse, hovering already selected it, so a click starts it. On touch, the first tap selects.
+    b.addEventListener('click', function () { if (sel === id && (fine || b.dataset.tapped)) launch(id); else { select(id); buttons.forEach(function (x) { delete x.dataset.tapped; }); b.dataset.tapped = '1'; } });
+  });
+  $('start').addEventListener('click', function () { launch(sel); });
+  cardHit.addEventListener('click', function () { launch(sel); });
+
+  function launch(id, opts) {
+    opts = opts || {};
+    if (open || busy || !APPS[id]) return;
+    select(id);
+    open = id; busy = true;
+    var reduce = reducedMQ.matches || opts.instant;
+    if (!opts.fromHistory) { history.pushState({ app: id }, '', '#' + id); pushed = true; }
+    if (reduce) win.classList.add('instant');
+    win.classList.remove('preview'); win.removeAttribute('aria-hidden');
+    document.body.classList.add('app-open');
+    root.style.setProperty('--card', 'none'); root.style.setProperty('--card-r', '0px');
+    var fr = frames[id];
+    fr.el.tabIndex = 0; $('homeBtn').tabIndex = 0; $('newTab').tabIndex = 0; dots.forEach(function (d) { d.tabIndex = 0; });
+    setTimeout(function () {
+      win.classList.remove('instant'); busy = false;
+      var go = function () { splash.classList.add('gone'); try { fr.el.focus(); } catch (e) {} };
+      if (fr.loaded) go(); else { fr.waiters.push(go); setTimeout(go, 2500); }
+    }, reduce ? 0 : DUR);
+  }
+
+  function home(opts) {
+    opts = opts || {};
+    if (!open) return;
+    // Leave through history when we came in through it, so Back and the button agree.
+    if (!opts.fromHistory && pushed) { history.back(); return; }
+    var id = open, reduce = reducedMQ.matches;
+    busy = true;
+    if (reduce) win.classList.add('instant');
+    frames[id].el.tabIndex = -1; $('homeBtn').tabIndex = -1; $('newTab').tabIndex = -1; dots.forEach(function (d) { d.tabIndex = -1; });
+    win.classList.add('preview'); win.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('app-open');
+    placeCard();
+    setTimeout(function () {
+      win.classList.remove('instant'); open = null; busy = false; pushed = false;
+      var b = buttons.find(function (x) { return x.dataset.app === id; }); b.focus({ preventScroll: true });
+    }, reduce ? 0 : DUR);
+  }
+  $('homeBtn').addEventListener('click', function () { home(); });
+
+  // Swap the open app for another one without going home: the new one slides in from the
+  // side it was swiped from. The URL follows (#id) without adding a history entry, so Back
+  // still means "launcher".
+  function switchTo(id, dir) {
+    if (!open || busy || id === open || !APPS[id]) return;
+    var prev = frames[open];
+    if (!dir) dir = order.indexOf(id) > order.indexOf(open) ? 1 : -1;
+    busy = true;
+    prev.el.tabIndex = -1;
+    select(id, { force: true });
+    open = id;
+    history.replaceState({ app: id }, '', '#' + id);
+    var fr = frames[id];
+    fr.el.tabIndex = 0;
+    if (!reducedMQ.matches && fr.el.animate) {
+      var opts = { duration: 380, easing: 'cubic-bezier(.32,.72,0,1)' };
+      fr.el.animate([{ transform: 'translateX(' + dir * 28 + '%)', opacity: 0 }, { transform: 'none', opacity: 1 }], opts);
+      prev.el.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(' + -dir * 28 + '%)', opacity: 0 }], opts);
+      splash.animate([{ transform: 'translateX(' + dir * 28 + '%)' }, { transform: 'none' }], opts);
+    }
+    setTimeout(function () {
+      busy = false;
+      var go = function () { if (open === id) { splash.classList.add('gone'); try { fr.el.focus(); } catch (e) {} } };
+      if (fr.loaded) go(); else fr.waiters.push(go);
+    }, reducedMQ.matches ? 0 : 380);
+  }
+  function step(dir) {
+    var cur = open || sel, n = order.length;
+    if (n < 2) return;
+    var next = order[(order.indexOf(cur) + dir + n) % n];
+    if (open) switchTo(next, dir); else select(next);
+  }
+
+  // Swipe: on the home screen anywhere, and in an app on its top bar (the app itself keeps
+  // its own drags, like spinning a globe). Swipe left for the next app, right for the previous.
+  var touch = null, swipedAt = 0;
+  addEventListener('touchstart', function (e) {
+    if (busy || e.touches.length !== 1) { touch = null; return; }
+    var t = e.target, onBar = t.closest && t.closest('.bar');
+    if (open ? !onBar : (t.closest && t.closest('.window'))) { touch = null; return; }
+    touch = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+  }, { passive: true });
+  addEventListener('touchend', function (e) {
+    if (!touch) return;
+    var dx = e.changedTouches[0].clientX - touch.x, dy = e.changedTouches[0].clientY - touch.y, quick = Date.now() - touch.t < 800;
+    touch = null;
+    if (quick && Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) { swipedAt = Date.now(); step(dx < 0 ? 1 : -1); }
+  }, { passive: true });
+  addEventListener('touchcancel', function () { touch = null; }, { passive: true });
+  // a swipe that ends on a button shouldn't also press it
+  document.addEventListener('click', function (e) { if (Date.now() - swipedAt < 450) { e.preventDefault(); e.stopPropagation(); } }, true);
+  // two-finger sideways scroll on a trackpad does the same on the home screen
+  var wheelSum = 0, wheelQuiet = 0;
+  addEventListener('wheel', function (e) {
+    if (open || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    var now = Date.now();
+    if (now < wheelQuiet) return;
+    wheelSum += e.deltaX;
+    if (Math.abs(wheelSum) > 80) { step(wheelSum > 0 ? 1 : -1); wheelSum = 0; wheelQuiet = now + 500; }
+  }, { passive: true });
+
+  addEventListener('popstate', function (e) {
+    var want = e.state && e.state.app;
+    if (open && !want) home({ fromHistory: true });
+    else if (!open && want) { pushed = true; launch(want, { fromHistory: true }); }
+  });
+  addEventListener('hashchange', function () { var id = location.hash.slice(1); if (!open && APPS[id]) { history.replaceState(null, '', location.pathname); launch(id); } });
+  addEventListener('resize', function () {
+    if (open) { root.style.setProperty('--va', innerWidth + ' / ' + innerHeight); root.style.setProperty('--var', String(innerWidth / innerHeight)); return; }
+    win.classList.add('instant'); placeCard(); requestAnimationFrame(function () { win.classList.remove('instant'); });
+  });
+
+  addEventListener('keydown', function (e) {
+    if (open) { if (e.key === 'Escape') home(); return; }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { step(1); buttons[order.indexOf(sel)].focus({ preventScroll: true }); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { step(-1); buttons[order.indexOf(sel)].focus({ preventScroll: true }); e.preventDefault(); }
+    else if (e.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('.actions, .app, .card-hit'))) { launch(sel); e.preventDefault(); }
+  });
+
+  // An app loading behind the home screen can focus one of its own fields, which would
+  // take the arrow keys away from the launcher. On the home screen, take focus back.
+  addEventListener('blur', function () {
+    setTimeout(function () {
+      var f = document.activeElement;
+      if (!open && f && f.tagName === 'IFRAME' && f.closest('#frames')) { f.blur(); buttons[order.indexOf(sel)].focus({ preventScroll: true }); }
+    });
+  });
+
+  // the background wash follows the pointer a little
+  if (fine && !reducedMQ.matches) addEventListener('pointermove', function (e) {
+    root.style.setProperty('--mx', (50 + (e.clientX / innerWidth - .5) * 30) + '%');
+    root.style.setProperty('--my', (40 + (e.clientY / innerHeight - .5) * 20) + '%');
+  }, { passive: true });
+
+  // boot: once per visit
+  try { if (!sessionStorage.getItem('booted') && !reducedMQ.matches) { document.body.classList.add('booting'); sessionStorage.setItem('booted', '1'); setTimeout(function () { document.body.classList.remove('booting'); }, 2100); } } catch (e) {}
+
+  win.classList.add('instant');
+  placeCard();
+  var start = location.hash.slice(1);
+  select(APPS[start] ? start : order[0], { force: true });
+  requestAnimationFrame(function () { win.classList.remove('instant'); });
+  // A link straight to an app (#gridline) opens it, with the launcher one Back away.
+  if (APPS[start]) { history.replaceState(null, '', location.pathname); launch(start, { instant: true }); }
+  // fonts can shift the layout once they arrive
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!open) { win.classList.add('instant'); placeCard(); requestAnimationFrame(function () { win.classList.remove('instant'); }); } });
+
+  // Once the selected app is in, load its neighbours in the background, so the next swipe
+  // or arrow lands on an app that's already running. Only neighbours: with many apps,
+  // loading all of them at once would be too much for a phone.
+  function warmNeighbours() {
+    var conn = navigator.connection || {}, lean = conn.saveData || /2g/.test(conn.effectiveType || '');
+    var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1200); };
+    var n = order.length, i = order.indexOf(open || sel);
+    if (lean || n < 2 || i < 0) return;
+    var queue = [order[(i + 1) % n], order[(i - 1 + n) % n]];
+    (function next() {
+      var id = queue.shift(); if (!id) return;
+      idle(function () { var fr = warm(id); if (fr.loaded) next(); else fr.waiters.push(next); }, { timeout: 3000 });
+    })();
+  }
+
+  function tick() { var d = new Date(); $('clock').innerHTML = '<span class="d">' + d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + '&nbsp; </span>' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+  tick(); setInterval(tick, 15000);
+
+  // drifting light waves, tinted with the selected app's colour; paused while an app is open
+  var c = $('waves'), x = c.getContext('2d'), t = 0, w, h, dpr, rgb = [127, 167, 255];
+  function size() { dpr = Math.min(devicePixelRatio || 1, 2); w = innerWidth; h = innerHeight; c.width = w * dpr; c.height = h * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  size(); addEventListener('resize', size);
+  function hex(s) { return [1, 3, 5].map(function (i) { return parseInt(s.slice(i, i + 2), 16); }); }
+  function frame() {
+    if (open) { setTimeout(frame, 400); return; }
+    var target = hex(APPS[sel] ? APPS[sel].tint : '#7FA7FF');
+    rgb = rgb.map(function (v, i) { return v + (target[i] - v) * .04; });
+    var g = x.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#070A14'); g.addColorStop(1, 'rgb(' + rgb.map(function (v) { return Math.round(v * .14); }).join(',') + ')');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    var col = rgb.map(Math.round).join(',');
+    for (var k = 0; k < 5; k++) {
+      x.beginPath();
+      for (var px = 0; px <= w; px += 8) {
+        var y = h * (.66 + k * .04) + Math.sin(px / (260 + k * 70) + t * (0.6 + k * .15) + k) * (26 + k * 10) + Math.sin(px / 120 + t * 1.3 + k * 2) * 6;
+        px === 0 ? x.moveTo(px, y) : x.lineTo(px, y);
+      }
+      x.strokeStyle = 'rgba(' + col + ',' + (0.34 - k * 0.055) + ')';
+      x.lineWidth = 1.2 + (4 - k) * .5;
+      x.shadowColor = 'rgba(' + col + ',.7)'; x.shadowBlur = 14;
+      x.stroke();
+    }
+    x.shadowBlur = 0;
+    if (!reducedMQ.matches) t += 0.008;
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>
