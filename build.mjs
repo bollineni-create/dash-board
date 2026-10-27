@@ -28,9 +28,11 @@ const shelf = [];
 for (const a of apps) {
   const src = `${SRC}/${a.id}`, dest = `${OUT}/${a.id}`;
   rmSync(src, { recursive: true, force: true });
-  execFileSync('git', ['clone', '--depth', '1', a.repo, src], { stdio: 'inherit' });
+  execFileSync('git', ['clone', '--depth', '1', ...(a.branch ? ['--branch', a.branch] : []), a.repo, src], { stdio: 'inherit' });
+  // `root` is the folder in the repo that holds the page (Ballast keeps it in public/).
+  const base = a.root ? `${src}/${a.root}` : src;
   for (const p of a.files || ['index.html', 'css', 'js', 'assets']) {
-    if (existsSync(`${src}/${p}`)) cpSync(`${src}/${p}`, `${dest}/${p}`, { recursive: true });
+    if (existsSync(`${base}/${p}`)) cpSync(`${base}/${p}`, `${dest}/${p}`, { recursive: true });
   }
   if (!existsSync(`${dest}/index.html`)) throw new Error(`${a.id}: no index.html after copying ${JSON.stringify(a.files)}.`);
 

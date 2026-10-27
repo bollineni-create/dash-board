@@ -50,6 +50,8 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 | Field | Meaning |
 | --- | --- |
 | `files` | What to copy from the repo. Default: `index.html`, `css`, `js`, `assets`. |
+| `root` | The folder in the repo that `files` are relative to, when the page isn't at the top (Ballast uses `public`). `icon` stays relative to the repo root. |
+| `branch` | Clone this branch instead of the default one. Use it to try an app's unmerged branch, then remove it. |
 | `chips` | Feature tags shown under the pitch. |
 | `iconStyle` | Extra CSS for the icon, to nudge one that is off-centre. |
 | `ownsEsc` | `true` if the app uses Esc itself. The launcher then leaves Esc to the app. |
@@ -58,6 +60,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 
 - **Static web apps** (plain HTML/JS/CSS, no build step) drop straight in. Gridline and Palimpsest are this kind.
 - **Apps with a build step** (Vite, React, and so on) need the build output committed to the repo, or a build step added to `build.mjs`. Point `files` at the output folder.
+- **Apps with their own small server** can keep their page as is and get a function in `api/` for the routes it needs. Ballast is this kind: `api/ballast.js` serves its price and strategy-builder routes by importing Ballast's own modules from `.src/ballast` (the copy the build clones), and `vercel.json` rewrites `/ballast/api/*` to it. Its paper-trading autopilot holds Alpaca keys, so it stays in the Mac app.
 - **Desktop or local-only apps** (Electron, apps that need the local file system or a local server) have to be ported first. Lodestar stays local for this reason.
 - Apps load in a same-origin frame. Avoid `X-Frame-Options: DENY` and full-page redirects to other sites.
 
@@ -77,6 +80,8 @@ Keys never go to the browser. The relay adds them on the server:
    ```
    The build writes `hosted-config.js`, which sets `window.myAppConfig.defaultKeys = { myprovider: '__server__' }`. It only does this when that key exists on the server.
 5. In the app itself, send requests to `/api/myprovider/...` with the header `x-api-key: __server__`.
+
+Ballast's Claude strategy builder uses `ANTHROPIC_API_KEY` the same way: set it in Vercel and `api/ballast.js` uses it, limited to `BALLAST_GENERATE_LIMIT` builds per visitor per 10 minutes (default 6). Without it, Ballast uses its built-in builder.
 
 The relay only allows GET requests and the paths in the allowlist. It also checks that requests come from this site and rate-limits each visitor (`RELAY_LIMIT_PER_MIN`, default 30).
 
