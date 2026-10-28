@@ -1,4 +1,4 @@
-# Merges a pull request on its own once Cursor has approved it and every check has passed.
+# Merges a pull request on its own once Cursor has approved it and every check and status has passed.
 # Cursor reviews each PR (Bugbot, the security reviewer and the approval agent). If it asks
 # for changes or pushes a fix, nothing merges until it approves the newest commit.
 name: Auto-merge after Cursor approves
@@ -7,11 +7,13 @@ on:
     types: [submitted]
   check_suite:
     types: [completed]
+  status: {}
   workflow_dispatch:
 permissions:
   contents: write
   pull-requests: write
   checks: read
+  statuses: read
 concurrency:
   group: auto-merge
   cancel-in-progress: false
@@ -46,12 +48,27 @@ jobs:
                 .filter((r) => r.name !== 'auto-merge');
               const pending = runs.filter((r) => r.status !== 'completed').map((r) => r.name);
               const failed = runs.filter((r) => r.status === 'completed' && !OK.includes(r.conclusion)).map((r) => r.name);
+              // Commit statuses too (Vercel reports its preview deployment this way).
+              const { data: combined } = await github.rest.repos.getCombinedStatusForRef({ owner, repo, ref: sha });
+              for (const s of combined.statuses) {
+                if (s.state === 'pending') pending.push(s.context);
+                else if (s.state !== 'success') failed.push(s.context);
+              }
               if (pending.length || failed.length) {
                 core.info(`#${number}: pending [${pending.join(', ')}] failed [${failed.join(', ')}]`);
                 continue;
               }
+              if (pr.mergeable === false) {
+                core.warning(`#${number}: has a merge conflict, not merging`);
+                continue;
+              }
 
-              await github.rest.pulls.merge({ owner, repo, pull_number: number, merge_method: 'squash', sha });
-              core.notice(`Merged #${number} (${pr.title})`);
-              await github.rest.git.deleteRef({ owner, repo, ref: `heads/${pr.head.ref}` }).catch(() => {});
+              // One PR failing to merge (a conflict, a race) must not stop the others.
+              try {
+                await github.rest.pulls.merge({ owner, repo, pull_number: number, merge_method: 'squash', sha });
+                core.notice(`Merged #${number} (${pr.title})`);
+                await github.rest.git.deleteRef({ owner, repo, ref: `heads/${pr.head.ref}` }).catch(() => {});
+              } catch (err) {
+                core.warning(`#${number}: merge failed: ${err.message}`);
+              }
             }
