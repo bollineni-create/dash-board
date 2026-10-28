@@ -24,16 +24,18 @@ jobs:
   auto-merge:
     runs-on: ubuntu-latest
     env:
-      # Checks or statuses that must have reported success on the PR's newest commit.
-      # Missing ones count as pending, so nothing merges before they have run.
-      REQUIRED_CHECKS: "Vercel, Cursor Bugbot, Cursor Security Agent: Security Reviewer"
+      # Gates that must report success on the PR's newest commit, as "name@source": a check
+      # run from that GitHub App (github-actions, cursor), or "@status" for a commit status.
+      # A required gate that hasn't reported counts as pending; neutral or skipped is a fail.
+      REQUIRED_CHECKS: "Vercel@status, Cursor Bugbot@cursor, Cursor Security Agent: Security Reviewer@cursor"
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
             const OK = ['success', 'neutral', 'skipped'];
-            const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean);
+            const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean)
+              .map((spec) => { const at = spec.lastIndexOf('@'); return { name: spec.slice(0, at), source: spec.slice(at + 1) }; });
             // Never check out or run the PR's code here: this job holds a write token.
             const candidates = context.payload.pull_request
               ? [context.payload.pull_request]
@@ -63,9 +65,20 @@ jobs:
                 if (s.state === 'pending') pending.push(s.context);
                 else if (s.state !== 'success') failed.push(s.context);
               }
-              // Required gates that have not reported yet are pending, never a pass.
-              const reported = new Set([...runs.map((r) => r.name), ...combined.statuses.map((s) => s.context)]);
-              for (const name of REQUIRED) if (!reported.has(name)) pending.push(`${name} (not started)`);
+              // Required gates must come from the expected source and end in success. Not yet
+              // reported counts as pending; a same-named check from another app doesn't count.
+              for (const { name, source } of REQUIRED) {
+                if (source === 'status') {
+                  const st = combined.statuses.find((s) => s.context === name);
+                  if (!st) pending.push(`${name} (not started)`);
+                  else if (st.state !== 'success' && st.state !== 'pending') failed.push(name);
+                  continue;
+                }
+                const mine = runs.filter((r) => r.name === name && r.app?.slug === source);
+                if (!mine.length) pending.push(`${name} (not started)`);
+                else if (mine.some((r) => r.status !== 'completed')) pending.push(name);
+                else if (mine.some((r) => r.conclusion !== 'success')) failed.push(`${name} (${mine.map((r) => r.conclusion).join('/')})`);
+              }
               if (!runs.length && !combined.statuses.length) pending.push('no checks reported yet');
               if (pending.length || failed.length) {
                 core.info(`#${number}: pending [${pending.join(', ')}] failed [${failed.join(', ')}]`);
