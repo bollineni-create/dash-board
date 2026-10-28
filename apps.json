@@ -98,5 +98,20 @@
     ],
     "tint": "#2FA39C",
     "wash": "#062624"
+  },
+  {
+    "id": "loom",
+    "name": "Loom",
+    "path": "apps/loom",
+    "icon": "assets/icon.png",
+    "kind": "Second brain · notes & links",
+    "pitch": "Save notes, links, images and files; Claude summarizes and tags each one, and your library becomes a map you can search and ask.",
+    "chips": [
+      "A map of your ideas",
+      "Ask your library",
+      "Stays in your browser"
+    ],
+    "tint": "#E07A52",
+    "wash": "#1B1411"
   }
 ]

@@ -14,6 +14,10 @@
     {
       "source": "/rounds/api/:route*",
       "destination": "/api/rounds?route=:route*"
+    },
+    {
+      "source": "/loom/api/:route*",
+      "destination": "/api/loom?route=:route*"
     }
   ],
   "headers": [
@@ -67,6 +71,9 @@
     },
     "api/rounds.js": {
       "maxDuration": 30
+    },
+    "api/loom.js": {
+      "maxDuration": 60
     }
   }
 }

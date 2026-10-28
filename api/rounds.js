@@ -60,8 +60,13 @@ async function reddit(path, params) {
     // (private, quarantined, banned) in its body; pass that reason on to the app.
     const body = await r.json().catch(() => null);
     const status = r.status >= 300 && r.status < 400 ? 404 : r.status;
-    const reason = (typeof body?.reason === 'string' && body.reason) || (status === 404 ? 'not_found' : status === 429 ? 'rate_limited' : 'upstream');
-    const message = status === 403 ? 'Reddit refused the request (the subreddit may be private).' : `Reddit returned an error (${status}).`;
+    const given = typeof body?.reason === 'string' && body.reason;
+    // A 403 with no reason is Reddit refusing this server rather than a subreddit; it
+    // blocks anonymous requests from cloud hosts, which REDDIT_CLIENT_ID avoids.
+    const reason = given || (status === 404 ? 'not_found' : status === 429 ? 'rate_limited' : status === 403 ? 'blocked' : 'upstream');
+    const message = status === 403
+      ? (given ? 'Reddit refused the request (the subreddit may be private).' : 'Reddit blocked the server’s request. Set REDDIT_CLIENT_ID to sign in.')
+      : `Reddit returned an error (${status}).`;
     throw Object.assign(new Error(message), { status, reason });
   }
   return r.json();
