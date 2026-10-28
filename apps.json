@@ -10,6 +10,7 @@
       "assets"
     ],
     "icon": "assets/icons/icon.svg",
+    "installIcon": "assets/icons/icon-512.png",
     "kind": "Car deals · live market",
     "pitch": "Type your ZIP. See the best car deals around you, and the ones worth the drive.",
     "chips": [
@@ -65,6 +66,7 @@
       "lib"
     ],
     "icon": "assets/icon-256.png",
+    "installIcon": "assets/icon-1024.png",
     "kind": "Trading strategies · backtests",
     "pitch": "Describe a trading idea in plain English. Ballast writes the rules, backtests them on real prices, and keeps your portfolio on target.",
     "chips": [
@@ -87,6 +89,7 @@
       "assets"
     ],
     "icon": "web/assets/icon.png",
+    "installIcon": "web/assets/icon-512.png",
     "kind": "Reddit reader · any subreddit",
     "pitch": "Follow the subreddits you care about. Rounds pulls the best threads and their comments, ranks them, and gathers the links people share into a reading list.",
     "chips": [
@@ -104,6 +107,7 @@
     "root": "web",
     "files": ["index.html", "css", "js", "assets"],
     "icon": "web/assets/icon.png",
+    "installIcon": "web/assets/icon-512.png",
     "kind": "Second brain · notes & links",
     "pitch": "Save notes, links, images and files; Claude summarizes and tags each one, and your library becomes a map you can search and ask.",
     "chips": [

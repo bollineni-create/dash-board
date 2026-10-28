@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offline · bollineni.co</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#070A14">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+/* Shown by the service worker when an installed app opens without a connection.
+   Self-contained: no web fonts or files, so it renders with the network down. */
+:root { --night: #070A14; --ink: #F1F4FF; --muted: #A2ACC8; --tint: #7FA7FF; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--night); color: var(--ink);
+  font: 400 17px/1.6 "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  display: grid; place-items: center; text-align: center;
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 360px; display: grid; gap: 14px; justify-items: center; }
+h1 { font-size: 30px; font-weight: 800; margin: 0; letter-spacing: -.01em; }
+p { margin: 0; color: var(--muted); }
+button { margin-top: 8px; font: 600 16px/1 inherit; color: var(--night); background: var(--tint); border: 0; border-radius: 999px; padding: 13px 22px; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>You're offline</h1>
+  <p>This app needs a connection. Your saved work is still on this device and will be here when you're back online.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+</body>
+</html>

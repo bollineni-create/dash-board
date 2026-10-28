@@ -62,6 +62,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 | `commit` | Hold the app at this commit. Pushes to its repo then don't reach the site until you change or remove it. Ballast and Rounds are held while their Mac and iOS versions are worked on. |
 | `branch` | Follow this branch instead of the default one. Use it to try an app's unmerged branch, then remove it. |
 | `chips` | Feature tags shown under the pitch. |
+| `installIcon` | A PNG, 512px or larger, used when someone installs the app to their home screen (Share → Add to Home Screen, or Install app in Chrome). Defaults to `icon`, which then has to be a PNG. |
 | `iconStyle` | Extra CSS for the icon, to nudge one that is off-centre. |
 | `ownsEsc` | `true` if the app uses Esc itself. The launcher then leaves Esc to the app. |
 
