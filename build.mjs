@@ -26,8 +26,11 @@ mkdirSync(`${OUT}/icons`, { recursive: true });
 cpSync('site', OUT, { recursive: true });
 
 const SITE_ICONS = ['<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
-  '<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">',
-  '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'].join('\n');
+  '<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">'].join('\n');
+// Registers the site's service worker (site/sw.js). Network first; it only caches the offline page.
+const SW_SCRIPT = `<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));</script>`;
+// Width and height of a PNG, read from its header, so the manifest states the real icon size.
+const pngSize = (file) => { const b = readFileSync(file); return b.toString('ascii', 12, 16) === 'IHDR' ? `${b.readUInt32BE(16)}x${b.readUInt32BE(20)}` : null; };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const shelf = [];
 for (const a of apps) {
@@ -66,20 +69,43 @@ for (const a of apps) {
     console.log(`${a.id}: server keys ${Object.keys(serverKeys).join(', ') || 'none'}`);
   }
 
-  // Every app page wears the site's "b" icon in the tab and on the home screen, so the
-  // whole site reads as one place. The app's own icon still shows on the launcher shelf.
+  // Icons come straight from each app's repo, so they stay current.
+  const icon = `icons/${a.id}${extname(a.icon)}`;
+  cpSync(`${src}/${a.icon}`, `${OUT}/${icon}`);
+
+  // Installable app: each app gets its own manifest scoped to /<id>/, so "Add to Home Screen"
+  // on an app's page installs that app, with its own icon and name, opening full screen.
+  // `installIcon` is a large PNG (512px or more) from the app's repo; it falls back to `icon`.
+  const installSrc = `${src}/${a.installIcon || a.icon}`;
+  const installSize = extname(installSrc) === '.png' ? pngSize(installSrc) : null;
+  if (!installSize) throw new Error(`${a.id}: the install icon must be a PNG. Set "installIcon" in apps.json.`);
+  const installIcon = `/icons/${a.id}-app.png`;
+  cpSync(installSrc, `${OUT}${installIcon}`);
+  writeFileSync(`${dest}/manifest.webmanifest`, JSON.stringify({
+    id: `/${a.id}/`, name: a.name, short_name: a.name, description: a.pitch,
+    start_url: `/${a.id}/`, scope: `/${a.id}/`, display: 'standalone',
+    background_color: a.wash, theme_color: a.wash,
+    icons: [{ src: installIcon, sizes: installSize, type: 'image/png', purpose: 'any' }],
+  }, null, 2));
+  const appHead = [SITE_ICONS,
+    `<link rel="apple-touch-icon" href="${installIcon}">`,
+    `<link rel="manifest" href="/${a.id}/manifest.webmanifest">`,
+    '<meta name="mobile-web-app-capable" content="yes">',
+    '<meta name="apple-mobile-web-app-capable" content="yes">',
+    `<meta name="apple-mobile-web-app-title" content="${esc(a.name)}">`,
+    SW_SCRIPT].join('\n');
+
+  // Every app page wears the site's "b" icon in the browser tab, so the whole site reads as
+  // one place. Installed to a home screen, an app shows its own icon instead.
   for (const f of readdirSync(dest).filter((n) => n.endsWith('.html'))) {
     const html = readFileSync(`${dest}/${f}`, 'utf8');
     if (!html.includes('</head>')) continue;
     writeFileSync(`${dest}/${f}`, html
       .replace(/[ \t]*<link\b(?:"[^"]*"|'[^']*'|[^'">])*>[ \t]*\r?\n?/gi,
-        (tag) => /\brel\s*=\s*["']?(?:shortcut icon|icon|apple-touch-icon(?:-precomposed)?|mask-icon)["'\s>]/i.test(tag) ? '' : tag)
-      .replace('</head>', `${SITE_ICONS}\n</head>`));
+        (tag) => /\brel\s*=\s*["']?(?:shortcut icon|icon|apple-touch-icon(?:-precomposed)?|mask-icon|manifest)["'\s>]/i.test(tag) ? '' : tag)
+      .replace(/[ \t]*<meta\b[^>]*\bname\s*=\s*["']?(?:apple-mobile-web-app-capable|mobile-web-app-capable|apple-mobile-web-app-title)["'\s][^>]*>[ \t]*\r?\n?/gi, '')
+      .replace('</head>', `${appHead}\n</head>`));
   }
-
-  // Icons come straight from each app's repo, so they stay current.
-  const icon = `icons/${a.id}${extname(a.icon)}`;
-  cpSync(`${src}/${a.icon}`, `${OUT}/${icon}`);
   shelf.push({ id: a.id, name: a.name, icon, iconStyle: a.iconStyle || '', url: `/${a.id}/`, kind: a.kind,
     pitch: a.pitch, chips: a.chips || [], tint: a.tint, wash: a.wash, ownsEsc: !!a.ownsEsc });
 }
