@@ -2,11 +2,12 @@
 # Cursor reviews each PR (Bugbot, the security reviewer and the approval agent). If it asks
 # for changes or pushes a fix, nothing merges until it approves the newest commit.
 name: Auto-merge after Cursor approves
+# Every trigger runs the copy of this file on the default branch, never a PR's own copy,
+# so a PR cannot edit this workflow to merge itself. Cursor's approval agent reports a
+# check suite when it approves, which is what wakes this up after an approval.
 on:
-  pull_request:
+  pull_request_target:
     types: [ready_for_review]
-  pull_request_review:
-    types: [submitted]
   check_suite:
     types: [completed]
   status: {}
@@ -33,6 +34,7 @@ jobs:
             const { owner, repo } = context.repo;
             const OK = ['success', 'neutral', 'skipped'];
             const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean);
+            // Never check out or run the PR's code here: this job holds a write token.
             const candidates = context.payload.pull_request
               ? [context.payload.pull_request]
               : await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
