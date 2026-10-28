@@ -18,9 +18,9 @@ A console-style home screen that opens each app inside the site: https://bolline
 
 ## Keeping apps up to date
 
-- **Apps that follow their repo** (Gridline, Palimpsest): every 10 minutes, `.github/workflows/sync-apps.yml` checks each app's newest commit. If any app has moved, the workflow writes the new commits into `apps.lock.json` and commits that to `main`, and Vercel then deploys `main`. A push to Palimpsest or Gridline reaches the site within about 10 to 15 minutes. GitHub can run scheduled workflows late when it's busy. To update right away, start the workflow by hand from the Actions tab (*Sync apps → Run workflow*).
-- **Apps held at a commit** (Ballast, Rounds): `commit` in `apps.json` fixes the version the site shows. To release a new version, set `commit` to the new commit, or remove `commit` so the app follows its repo again.
-- **Loom** lives in this repo at `apps/loom`, so it changes only when this repo changes.
+- **Every app with a `repo`** (Gridline, Palimpsest, Ballast, Rounds) follows its repo's default branch. Each app repo has `.github/workflows/notify-dash-board.yml`, which tells this repo about every push to `main`. That starts `.github/workflows/sync-apps.yml`, which writes the app's new commit into `apps.lock.json` and commits it to `main`, and Vercel then deploys `main`. A push to an app reaches the site in a minute or two. The notify step needs a `DASH_BOARD_TOKEN` secret in each app repo (a fine-grained token with *Contents: read and write* on this repo). As a backup, `sync-apps.yml` also checks every app every 5 minutes, though GitHub can run scheduled workflows late or skip them when it's busy. To update right away, start the workflow by hand from the Actions tab (*Sync apps → Run workflow*).
+- **Holding an app at a version:** set `commit` in `apps.json` to the commit you want. The site then shows that commit until you change or remove it.
+- **Loom** on the site is a web version of the Mac app (repo `blank`, SwiftUI) and lives in this repo at `apps/loom`. It changes only when this repo changes, since a push to `blank` changes Swift code the browser cannot run.
 
 Vercel has to be connected to this repo (Project → Settings → Git) for a push to `main` to deploy.
 

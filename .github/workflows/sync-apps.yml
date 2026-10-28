@@ -1,9 +1,9 @@
 # Keeps apps.lock.json at the newest commit of each app that follows its repo
-# (Gridline and Palimpsest). A change is committed to main, and Vercel deploys main.
+# (every app with a `repo` and no `commit` pin). A change is committed to main, and Vercel deploys main.
 name: Sync apps
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
   repository_dispatch:
     types: [app-updated]
