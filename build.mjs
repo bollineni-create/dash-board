@@ -7,7 +7,7 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, ex
 import { extname } from 'node:path';
 
 const OUT = 'public', SRC = '.src';
-const RESERVED = new Set(['api', 'icons']);
+const RESERVED = new Set(['api', 'icons', 'legal']);
 const apps = JSON.parse(readFileSync('apps.json', 'utf8'));
 const lock = existsSync('apps.lock.json') ? JSON.parse(readFileSync('apps.lock.json', 'utf8')) : {};
 
