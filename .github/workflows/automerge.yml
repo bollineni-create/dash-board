@@ -3,8 +3,8 @@
 # for changes or pushes a fix, nothing merges until it approves the newest commit.
 name: Auto-merge after Cursor approves
 # Every trigger runs the copy of this file on the default branch, never a PR's own copy,
-# so a PR cannot edit this workflow to merge itself. Cursor's approval agent reports a
-# check suite when it approves, which is what wakes this up after an approval.
+# so a PR cannot edit this workflow to merge itself. Cursor's approval agent completes a
+# check suite a few seconds after it posts its approval, which is what wakes this up.
 on:
   pull_request_target:
     types: [ready_for_review]
@@ -46,9 +46,20 @@ jobs:
               if (pr.head.repo.full_name !== `${owner}/${repo}`) continue; // never merge forks
               const sha = pr.head.sha;
 
-              // Cursor's latest verdict must be an approval of the newest commit.
-              const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
-              const verdict = reviews.filter((r) => r.user?.login === 'cursor[bot]' && ['APPROVED', 'CHANGES_REQUESTED'].includes(r.state)).pop();
+              // Cursor's latest verdict must be an approval of the newest commit. A review can't
+              // trigger this workflow safely (it would run the PR's own copy), so we rely on the
+              // check suite Cursor's approval agent completes right after it reviews. If that
+              // suite woke us and the review isn't visible yet, look again for up to a minute.
+              const fromCursorSuite = context.eventName === 'check_suite' && context.payload.check_suite?.app?.slug === 'cursor';
+              const cursorVerdict = async () => {
+                const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
+                return reviews.filter((r) => r.user?.login === 'cursor[bot]' && ['APPROVED', 'CHANGES_REQUESTED'].includes(r.state)).pop();
+              };
+              let verdict = await cursorVerdict();
+              for (let i = 0; fromCursorSuite && i < 4 && !(verdict?.state === 'APPROVED' && verdict.commit_id === sha); i++) {
+                await new Promise((r) => setTimeout(r, 15000));
+                verdict = await cursorVerdict();
+              }
               if (!verdict || verdict.state !== 'APPROVED' || verdict.commit_id !== sha) {
                 core.info(`#${number}: waiting for Cursor to approve ${sha.slice(0, 7)}`);
                 continue;
