@@ -3,6 +3,8 @@
 # for changes or pushes a fix, nothing merges until it approves the newest commit.
 name: Auto-merge after Cursor approves
 on:
+  pull_request:
+    types: [ready_for_review]
   pull_request_review:
     types: [submitted]
   check_suite:
