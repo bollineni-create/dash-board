@@ -1,5 +1,6 @@
 // Build: copy the launcher page into public/, then for every app in apps.json pull the
-// latest code from GitHub into public/<id>/ and its icon into public/icons/. The launcher
+// latest code from GitHub (or, with `path`, take it from this repo, as Loom's web version
+// lives in apps/loom) into public/<id>/ and its icon into public/icons/. The launcher
 // page gets the list of apps written into it, so apps.json is the one place to add an app.
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
@@ -11,7 +12,7 @@ const apps = JSON.parse(readFileSync('apps.json', 'utf8'));
 
 const seen = new Set();
 for (const a of apps) {
-  for (const k of ['id', 'name', 'repo', 'icon', 'kind', 'pitch', 'tint', 'wash']) {
+  for (const k of ['id', 'name', a.path ? 'path' : 'repo', 'icon', 'kind', 'pitch', 'tint', 'wash']) {
     if (!a[k]) throw new Error(`apps.json: "${a.id || a.name || '?'}" is missing "${k}".`);
   }
   if (!/^[a-z0-9-]+$/.test(a.id)) throw new Error(`apps.json: id "${a.id}" must be lowercase letters, digits and dashes.`);
@@ -26,11 +27,16 @@ cpSync('site', OUT, { recursive: true });
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const shelf = [];
 for (const a of apps) {
-  const src = `${SRC}/${a.id}`, dest = `${OUT}/${a.id}`;
-  rmSync(src, { recursive: true, force: true });
-  execFileSync('git', ['clone', '--depth', '1', a.repo, src], { stdio: 'inherit' });
+  const dest = `${OUT}/${a.id}`;
+  const src = a.path || `${SRC}/${a.id}`;
+  if (!a.path) {
+    rmSync(src, { recursive: true, force: true });
+    execFileSync('git', ['clone', '--depth', '1', ...(a.branch ? ['--branch', a.branch] : []), a.repo, src], { stdio: 'inherit' });
+  }
+  // `root` is the folder in the repo that holds the page (Ballast keeps it in public/).
+  const base = a.root ? `${src}/${a.root}` : src;
   for (const p of a.files || ['index.html', 'css', 'js', 'assets']) {
-    if (existsSync(`${src}/${p}`)) cpSync(`${src}/${p}`, `${dest}/${p}`, { recursive: true });
+    if (existsSync(`${base}/${p}`)) cpSync(`${base}/${p}`, `${dest}/${p}`, { recursive: true });
   }
   if (!existsSync(`${dest}/index.html`)) throw new Error(`${a.id}: no index.html after copying ${JSON.stringify(a.files)}.`);
 

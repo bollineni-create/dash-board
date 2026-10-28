@@ -3,27 +3,113 @@
     "id": "gridline",
     "name": "Gridline",
     "repo": "https://github.com/bollineni-create/hotwheels.git",
-    "files": ["index.html", "css", "js", "assets"],
+    "files": [
+      "index.html",
+      "css",
+      "js",
+      "assets"
+    ],
     "icon": "assets/icons/icon.svg",
     "kind": "Car deals · live market",
     "pitch": "Type your ZIP. See the best car deals around you, and the ones worth the drive.",
-    "chips": ["Live listings", "Fair value on every car", "Market map"],
+    "chips": [
+      "Live listings",
+      "Fair value on every car",
+      "Market map"
+    ],
     "tint": "#34D399",
     "wash": "#0B2A22",
-    "hostedConfig": { "global": "gridlineDesktop", "keys": { "autodev": "AUTODEV_KEY", "visor": "VISOR_KEY" } }
+    "hostedConfig": {
+      "global": "gridlineDesktop",
+      "keys": {
+        "autodev": "AUTODEV_KEY",
+        "visor": "VISOR_KEY"
+      }
+    }
   },
   {
     "id": "palimpsest",
     "name": "Palimpsest",
     "repo": "https://github.com/bollineni-create/palimpsest.git",
-    "files": ["index.html", "art.html", "philosophy.html", "compare.html", "css", "js", "assets"],
+    "files": [
+      "index.html",
+      "art.html",
+      "philosophy.html",
+      "compare.html",
+      "css",
+      "js",
+      "assets"
+    ],
     "icon": "assets/icon.png",
     "iconStyle": "transform: translateY(-1.4%) scale(1.17)",
     "kind": "Time travel · 3D globe",
     "pitch": "A journey through time on a 3D globe, from the Big Bang to yesterday. Drag the timeline and the world changes with it.",
-    "chips": ["13.8 billion years", "Borders for every era", "Ask the guide"],
+    "chips": [
+      "13.8 billion years",
+      "Borders for every era",
+      "Ask the guide"
+    ],
     "tint": "#F08A5D",
     "wash": "#331A0F",
     "ownsEsc": true
+  },
+  {
+    "id": "ballast",
+    "name": "Ballast",
+    "repo": "https://github.com/bollineni-create/ballast.git",
+    "root": "public",
+    "files": [
+      "index.html",
+      "app.js",
+      "styles.css",
+      "lib"
+    ],
+    "icon": "assets/icon-256.png",
+    "kind": "Trading strategies · backtests",
+    "pitch": "Describe a trading idea in plain English. Ballast writes the rules, backtests them on real prices, and keeps your portfolio on target.",
+    "chips": [
+      "Plain-English strategies",
+      "Backtests on real prices",
+      "Rebalancing plans"
+    ],
+    "tint": "#2DD4BF",
+    "wash": "#0A2826"
+  },
+  {
+    "id": "rounds",
+    "name": "Rounds",
+    "repo": "https://github.com/bollineni-create/read-it-client.git",
+    "root": "web",
+    "files": [
+      "index.html",
+      "css",
+      "js",
+      "assets"
+    ],
+    "icon": "web/assets/icon.png",
+    "kind": "Reddit reader · med school",
+    "pitch": "Follow the subreddits you care about. Rounds pulls the best threads and their comments, ranks them, and gathers the links people share into a reading list.",
+    "chips": [
+      "Ranked threads",
+      "Resource links",
+      "Saved offline"
+    ],
+    "tint": "#2FA39C",
+    "wash": "#062624"
+  },
+  {
+    "id": "loom",
+    "name": "Loom",
+    "path": "apps/loom",
+    "icon": "assets/icon.png",
+    "kind": "Second brain · notes & links",
+    "pitch": "Save notes, links, images and files; Claude summarizes and tags each one, and your library becomes a map you can search and ask.",
+    "chips": [
+      "A map of your ideas",
+      "Ask your library",
+      "Stays in your browser"
+    ],
+    "tint": "#E07A52",
+    "wash": "#1B1411"
   }
 ]
