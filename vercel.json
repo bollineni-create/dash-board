@@ -10,6 +10,10 @@
     {
       "source": "/ballast/api/:route*",
       "destination": "/api/ballast?route=:route*"
+    },
+    {
+      "source": "/rounds/api/:route*",
+      "destination": "/api/rounds?route=:route*"
     }
   ],
   "headers": [
@@ -60,6 +64,9 @@
   "functions": {
     "api/ballast.js": {
       "maxDuration": 120
+    },
+    "api/rounds.js": {
+      "maxDuration": 30
     }
   }
 }

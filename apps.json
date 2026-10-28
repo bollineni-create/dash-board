@@ -75,5 +75,28 @@
     ],
     "tint": "#2DD4BF",
     "wash": "#0A2826"
+  },
+  {
+    "id": "rounds",
+    "name": "Rounds",
+    "repo": "https://github.com/bollineni-create/read-it-client.git",
+    "branch": "web-version",
+    "root": "web",
+    "files": [
+      "index.html",
+      "css",
+      "js",
+      "assets"
+    ],
+    "icon": "web/assets/icon.png",
+    "kind": "Reddit reader · med school",
+    "pitch": "Follow the subreddits you care about. Rounds pulls the best threads and their comments, ranks them, and gathers the links people share into a reading list.",
+    "chips": [
+      "Ranked threads",
+      "Resource links",
+      "Saved offline"
+    ],
+    "tint": "#2FA39C",
+    "wash": "#062624"
   }
 ]
