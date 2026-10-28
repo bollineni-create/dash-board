@@ -36,6 +36,14 @@ jobs:
             const OK = ['success', 'neutral', 'skipped'];
             const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean)
               .map((spec) => { const at = spec.lastIndexOf('@'); return { name: spec.slice(0, at), source: spec.slice(at + 1) }; });
+            // True only when this run was woken by Cursor's check suite for this exact commit
+            // and that suite's approval agent run concluded success.
+            const suite = context.eventName === 'check_suite' ? context.payload.check_suite : null;
+            const approvalJustRan = async (sha) => {
+              if (suite?.app?.slug !== 'cursor' || suite.head_sha !== sha) return false;
+              const runs = await github.paginate(github.rest.checks.listForSuite, { owner, repo, check_suite_id: suite.id, per_page: 100 });
+              return runs.some((r) => r.name.startsWith('Cursor Approval Agent') && r.conclusion === 'success');
+            };
             // Never check out or run the PR's code here: this job holds a write token.
             const candidates = context.payload.pull_request
               ? [context.payload.pull_request]
@@ -48,17 +56,20 @@ jobs:
 
               // Cursor's latest verdict must be an approval of the newest commit. A review can't
               // trigger this workflow safely (it would run the PR's own copy), so we rely on the
-              // check suite Cursor's approval agent completes right after it reviews. If that
-              // suite woke us and the review isn't visible yet, look again for up to a minute.
-              const fromCursorSuite = context.eventName === 'check_suite' && context.payload.check_suite?.app?.slug === 'cursor';
+              // check suite Cursor completes once its approval agent has run (~3s after it
+              // reviews). Only for that suite's own commit, and only if the approval agent
+              // finished green, look again briefly in case the review isn't visible yet.
               const cursorVerdict = async () => {
                 const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
                 return reviews.filter((r) => r.user?.login === 'cursor[bot]' && ['APPROVED', 'CHANGES_REQUESTED'].includes(r.state)).pop();
               };
               let verdict = await cursorVerdict();
-              for (let i = 0; fromCursorSuite && i < 4 && !(verdict?.state === 'APPROVED' && verdict.commit_id === sha); i++) {
-                await new Promise((r) => setTimeout(r, 15000));
-                verdict = await cursorVerdict();
+              const approvedNewest = () => verdict?.state === 'APPROVED' && verdict.commit_id === sha;
+              if (!approvedNewest() && await approvalJustRan(sha)) {
+                for (let i = 0; i < 6 && !approvedNewest(); i++) {
+                  await new Promise((r) => setTimeout(r, 5000));
+                  verdict = await cursorVerdict();
+                }
               }
               if (!verdict || verdict.state !== 'APPROVED' || verdict.commit_id !== sha) {
                 core.info(`#${number}: waiting for Cursor to approve ${sha.slice(0, 7)}`);
