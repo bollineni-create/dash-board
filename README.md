@@ -47,7 +47,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not `api` or `icons`. |
+| `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not `api`, `icons` or `legal`. |
 | `repo` | A public git URL. The site follows the app's default branch: see [Keeping apps up to date](#keeping-apps-up-to-date). |
 | `icon` | Path inside the app's repo. |
 | `tint`, `wash` | The accent colour and the dark background tint shown while the app is selected. |
