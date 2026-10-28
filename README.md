@@ -16,6 +16,14 @@ A console-style home screen that opens each app inside the site: https://bolline
 - **Go back:** ← Launcher, Esc, or the browser's Back button.
 - **Preloading:** the selected app and the apps next to it load in the background, unless the phone is on Data Saver or a slow connection.
 
+## Keeping apps up to date
+
+- **Apps that follow their repo** (Gridline, Palimpsest): every 10 minutes, `.github/workflows/sync-apps.yml` checks each app's newest commit. If any app has moved, the workflow writes the new commits into `apps.lock.json` and commits that to `main`, and Vercel then deploys `main`. A push to Palimpsest or Gridline reaches the site within about 10 to 15 minutes. GitHub can run scheduled workflows late when it's busy. To update right away, start the workflow by hand from the Actions tab (*Sync apps → Run workflow*).
+- **Apps held at a commit** (Ballast, Rounds): `commit` in `apps.json` fixes the version the site shows. To release a new version, set `commit` to the new commit, or remove `commit` so the app follows its repo again.
+- **Loom** lives in this repo at `apps/loom`, so it changes only when this repo changes.
+
+Vercel has to be connected to this repo (Project → Settings → Git) for a push to `main` to deploy.
+
 ## Adding an app
 
 Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, the swipe order, the switcher dots and the app's address automatically.
@@ -40,7 +48,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 | Field | Meaning |
 | --- | --- |
 | `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not `api` or `icons`. |
-| `repo` | A public git URL. The build clones the default branch on every deploy, so a push to the app's repo reaches the site on the next deploy. |
+| `repo` | A public git URL. The site follows the app's default branch: see [Keeping apps up to date](#keeping-apps-up-to-date). |
 | `icon` | Path inside the app's repo. |
 | `tint`, `wash` | The accent colour and the dark background tint shown while the app is selected. |
 | `name`, `kind`, `pitch` | The text on the home screen. |
@@ -52,7 +60,8 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 | `files` | What to copy from the repo. Default: `index.html`, `css`, `js`, `assets`. |
 | `root` | The folder in the repo that `files` are relative to, when the page isn't at the top (Ballast uses `public`). `icon` stays relative to the repo root. |
 | `path` | Use a folder in this repo instead of `repo`. Loom's web version lives in `apps/loom`. |
-| `branch` | Clone this branch instead of the default one. Use it to try an app's unmerged branch, then remove it. |
+| `commit` | Hold the app at this commit. Pushes to its repo then don't reach the site until you change or remove it. Ballast and Rounds are held while their Mac and iOS versions are worked on. |
+| `branch` | Follow this branch instead of the default one. Use it to try an app's unmerged branch, then remove it. |
 | `chips` | Feature tags shown under the pitch. |
 | `iconStyle` | Extra CSS for the icon, to nudge one that is off-centre. |
 | `ownsEsc` | `true` if the app uses Esc itself. The launcher then leaves Esc to the app. |

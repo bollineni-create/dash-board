@@ -1,0 +1,30 @@
+# Keeps apps.lock.json at the newest commit of each app that follows its repo
+# (Gridline and Palimpsest). A change is committed to main, and Vercel deploys main.
+name: Sync apps
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [app-updated]
+permissions:
+  contents: write
+concurrency:
+  group: sync-apps
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/sync-lock.mjs
+      - name: Commit if an app moved
+        run: |
+          git diff --quiet apps.lock.json && exit 0
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Sync apps to their latest commits' apps.lock.json
+          git push

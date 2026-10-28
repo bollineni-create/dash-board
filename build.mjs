@@ -1,5 +1,6 @@
-// Build: copy the launcher page into public/, then for every app in apps.json pull the
-// latest code from GitHub (or, with `path`, take it from this repo, as Loom's web version
+// Build: copy the launcher page into public/, then for every app in apps.json pull its
+// code from GitHub at the commit in `commit` (a hand pin) or apps.lock.json (kept current by
+// .github/workflows/sync-apps.yml), else the latest (or, with `path`, take it from this repo, as Loom's web version
 // lives in apps/loom) into public/<id>/ and its icon into public/icons/. The launcher
 // page gets the list of apps written into it, so apps.json is the one place to add an app.
 import { execFileSync } from 'node:child_process';
@@ -9,6 +10,7 @@ import { extname } from 'node:path';
 const OUT = 'public', SRC = '.src';
 const RESERVED = new Set(['api', 'icons']);
 const apps = JSON.parse(readFileSync('apps.json', 'utf8'));
+const lock = existsSync('apps.lock.json') ? JSON.parse(readFileSync('apps.lock.json', 'utf8')) : {};
 
 const seen = new Set();
 for (const a of apps) {
@@ -31,7 +33,16 @@ for (const a of apps) {
   const src = a.path || `${SRC}/${a.id}`;
   if (!a.path) {
     rmSync(src, { recursive: true, force: true });
-    execFileSync('git', ['clone', '--depth', '1', ...(a.branch ? ['--branch', a.branch] : []), a.repo, src], { stdio: 'inherit' });
+    const commit = a.commit || lock[a.id];
+    if (commit) {
+      const git = (...args) => execFileSync('git', ['-C', src, ...args], { stdio: 'inherit' });
+      mkdirSync(src, { recursive: true });
+      git('init', '-q');
+      git('fetch', '-q', '--depth', '1', a.repo, commit);
+      git('checkout', '-q', 'FETCH_HEAD');
+    } else {
+      execFileSync('git', ['clone', '--depth', '1', ...(a.branch ? ['--branch', a.branch] : []), a.repo, src], { stdio: 'inherit' });
+    }
   }
   // `root` is the folder in the repo that holds the page (Ballast keeps it in public/).
   const base = a.root ? `${src}/${a.root}` : src;

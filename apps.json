@@ -57,6 +57,7 @@
     "id": "ballast",
     "name": "Ballast",
     "repo": "https://github.com/bollineni-create/ballast.git",
+    "commit": "8e15f43b8f94e359c9b20bc0322b1fec4a9e44f0",
     "root": "public",
     "files": [
       "index.html",
@@ -79,6 +80,7 @@
     "id": "rounds",
     "name": "Rounds",
     "repo": "https://github.com/bollineni-create/read-it-client.git",
+    "commit": "c804fd9b36bed323e3bbd275486bfd1a834ffc16",
     "root": "web",
     "files": [
       "index.html",
