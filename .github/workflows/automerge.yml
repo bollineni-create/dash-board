@@ -1,0 +1,57 @@
+# Merges a pull request on its own once Cursor has approved it and every check has passed.
+# Cursor reviews each PR (Bugbot, the security reviewer and the approval agent). If it asks
+# for changes or pushes a fix, nothing merges until it approves the newest commit.
+name: Auto-merge after Cursor approves
+on:
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+concurrency:
+  group: auto-merge
+  cancel-in-progress: false
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const OK = ['success', 'neutral', 'skipped'];
+            const candidates = context.payload.pull_request
+              ? [context.payload.pull_request]
+              : await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+            for (const { number } of candidates) {
+              const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+              if (pr.state !== 'open' || pr.draft || pr.base.ref !== pr.base.repo.default_branch) continue;
+              if (pr.head.repo.full_name !== `${owner}/${repo}`) continue; // never merge forks
+              const sha = pr.head.sha;
+
+              // Cursor's latest verdict must be an approval of the newest commit.
+              const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
+              const verdict = reviews.filter((r) => r.user?.login === 'cursor[bot]' && ['APPROVED', 'CHANGES_REQUESTED'].includes(r.state)).pop();
+              if (!verdict || verdict.state !== 'APPROVED' || verdict.commit_id !== sha) {
+                core.info(`#${number}: waiting for Cursor to approve ${sha.slice(0, 7)}`);
+                continue;
+              }
+
+              // Every other check on that commit must have finished green.
+              const runs = (await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, per_page: 100 }))
+                .filter((r) => r.name !== 'auto-merge');
+              const pending = runs.filter((r) => r.status !== 'completed').map((r) => r.name);
+              const failed = runs.filter((r) => r.status === 'completed' && !OK.includes(r.conclusion)).map((r) => r.name);
+              if (pending.length || failed.length) {
+                core.info(`#${number}: pending [${pending.join(', ')}] failed [${failed.join(', ')}]`);
+                continue;
+              }
+
+              await github.rest.pulls.merge({ owner, repo, pull_number: number, merge_method: 'squash', sha });
+              core.notice(`Merged #${number} (${pr.title})`);
+              await github.rest.git.deleteRef({ owner, repo, ref: `heads/${pr.head.ref}` }).catch(() => {});
+            }
