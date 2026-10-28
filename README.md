@@ -18,9 +18,9 @@ A console-style home screen that opens each app inside the site: https://bolline
 
 ## Keeping apps up to date
 
-- **Every app with a `repo`** (Gridline, Palimpsest, Ballast, Rounds) follows its repo's default branch. Each app repo has `.github/workflows/notify-dash-board.yml`, which tells this repo about every push to `main`. That starts `.github/workflows/sync-apps.yml`, which writes the app's new commit into `apps.lock.json` and commits it to `main`, and Vercel then deploys `main`. A push to an app reaches the site in a minute or two. The notify step needs a `DASH_BOARD_TOKEN` secret in each app repo (a fine-grained token with *Contents: read and write* on this repo). As a backup, `sync-apps.yml` also checks every app every 5 minutes, though GitHub can run scheduled workflows late or skip them when it's busy. To update right away, start the workflow by hand from the Actions tab (*Sync apps → Run workflow*).
+- **Every app with a `repo`** (all of them: Gridline, Palimpsest, Ballast, Rounds and Loom) follows its repo's default branch. Each app repo has `.github/workflows/notify-dash-board.yml`, which tells this repo about every push to `main`. That starts `.github/workflows/sync-apps.yml`, which writes the app's new commit into `apps.lock.json` and commits it to `main`, and Vercel then deploys `main`. A push to an app reaches the site in a minute or two. The notify step needs a `DASH_BOARD_TOKEN` secret in each app repo (a fine-grained token with *Contents: read and write* on this repo). As a backup, `sync-apps.yml` also checks every app every 5 minutes, though GitHub can run scheduled workflows late or skip them when it's busy. To update right away, start the workflow by hand from the Actions tab (*Sync apps → Run workflow*).
 - **Holding an app at a version:** set `commit` in `apps.json` to the commit you want. The site then shows that commit until you change or remove it.
-- **Loom** on the site is a web version of the Mac app (repo `blank`, SwiftUI) and lives in this repo at `apps/loom`. It changes only when this repo changes, since a push to `blank` changes Swift code the browser cannot run.
+- **Loom** comes from the `web/` folder of its repo (`blank`), next to the SwiftUI app, so a push there that touches `web/` changes the site like any other app.
 
 Vercel has to be connected to this repo (Project → Settings → Git) for a push to `main` to deploy.
 
@@ -58,8 +58,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 | Field | Meaning |
 | --- | --- |
 | `files` | What to copy from the repo. Default: `index.html`, `css`, `js`, `assets`. |
-| `root` | The folder in the repo that `files` are relative to, when the page isn't at the top (Ballast uses `public`). `icon` stays relative to the repo root. |
-| `path` | Use a folder in this repo instead of `repo`. Loom's web version lives in `apps/loom`. |
+| `root` | The folder in the repo that `files` are relative to, when the page isn't at the top (Ballast uses `public`, Rounds and Loom use `web`). `icon` stays relative to the repo root. |
 | `commit` | Hold the app at this commit. Pushes to its repo then don't reach the site until you change or remove it. Ballast and Rounds are held while their Mac and iOS versions are worked on. |
 | `branch` | Follow this branch instead of the default one. Use it to try an app's unmerged branch, then remove it. |
 | `chips` | Feature tags shown under the pitch. |
@@ -71,7 +70,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 - **Static web apps** (plain HTML/JS/CSS, no build step) drop straight in. Gridline and Palimpsest are this kind. So is Rounds, whose web version lives in `web/` in its repo.
 - **Apps with a build step** (Vite, React, and so on) need the build output committed to the repo, or a build step added to `build.mjs`. Point `files` at the output folder.
 - **Apps with their own small server** can keep their page as is and get a function in `api/` for the routes it needs. Ballast is this kind: `api/ballast.js` serves its price and strategy-builder routes by importing Ballast's own modules from `.src/ballast` (the copy the build clones), and `vercel.json` rewrites `/ballast/api/*` to it. Its paper-trading autopilot holds Alpaca keys, so it stays in the Mac app.
-- **Native apps** (SwiftUI and the like) need a web version written for them. Loom's lives in this repo at `apps/loom`, with `api/loom.js` for its Claude and link-reading routes.
+- **Native apps** (SwiftUI and the like) need a web version written for them. Keep it in a folder of the app's own repo and point `root` at it, as Loom does with `web/` in `blank`. Loom has `api/loom.js` here for its Claude and link-reading routes.
 - **Desktop or local-only apps** (Electron, apps that need the local file system or a local server) have to be ported first. Lodestar stays local for this reason.
 - Apps load in a same-origin frame. Avoid `X-Frame-Options: DENY` and full-page redirects to other sites.
 
@@ -111,4 +110,4 @@ The relay only runs on Vercel, so apps that need it show their "add your own key
 
 ## Credits
 
-Loom's web version uses [Figtree](https://github.com/erikdkennedy/figtree) and [DM Serif Display](https://github.com/googlefonts/dm-fonts), both under the SIL Open Font License (copies in `apps/loom/assets/fonts`).
+Loom's web version uses [Figtree](https://github.com/erikdkennedy/figtree) and [DM Serif Display](https://github.com/googlefonts/dm-fonts), both under the SIL Open Font License (copies in `web/assets/fonts` in the `blank` repo).

@@ -100,8 +100,10 @@
   {
     "id": "loom",
     "name": "Loom",
-    "path": "apps/loom",
-    "icon": "assets/icon.png",
+    "repo": "https://github.com/bollineni-create/blank.git",
+    "root": "web",
+    "files": ["index.html", "css", "js", "assets"],
+    "icon": "web/assets/icon.png",
     "kind": "Second brain · notes & links",
     "pitch": "Save notes, links, images and files; Claude summarizes and tags each one, and your library becomes a map you can search and ask.",
     "chips": [
