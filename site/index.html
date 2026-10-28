@@ -359,6 +359,8 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     $('chips').innerHTML = ''; a.chips.forEach(function (c) { var s = document.createElement('span'); s.textContent = c; $('chips').appendChild(s); });
     $('ghost').href = a.url; $('start').setAttribute('aria-label', 'Start ' + a.name); cardHit.setAttribute('aria-label', 'Open ' + a.name);
     heroEl.classList.remove('swap'); void heroEl.offsetWidth; heroEl.classList.add('swap');
+    // the new pitch can change the hero's height, which moves the slot in the split view
+    if (!open) placeCard();
     $('winIcon').src = a.icon; $('winName').textContent = a.name; $('newTab').href = a.url;
     $('splashIcon').src = a.icon;
     var fr = warm(id);
