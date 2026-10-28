@@ -57,7 +57,6 @@
     "id": "ballast",
     "name": "Ballast",
     "repo": "https://github.com/bollineni-create/ballast.git",
-    "branch": "hosted-launcher",
     "root": "public",
     "files": [
       "index.html",
@@ -80,7 +79,6 @@
     "id": "rounds",
     "name": "Rounds",
     "repo": "https://github.com/bollineni-create/read-it-client.git",
-    "branch": "web-version",
     "root": "web",
     "files": [
       "index.html",
