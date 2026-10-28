@@ -167,6 +167,12 @@ button { font: inherit; color: inherit; }
 .home, .status, .hint, .reflect { transition: transform .55s var(--ease), opacity .4s ease, filter .55s ease; }
 body.app-open .home, body.app-open .status, body.app-open .hint, body.app-open .reflect { transform: scale(.94); opacity: 0; filter: blur(8px); pointer-events: none; }
 body.app-open .card-hit { display: none; }
+/* While an app is open, the page behind its window takes the app's own background colour, so
+   the strip under the browser's toolbar (and any overscroll) carries on the app instead of
+   showing the launcher's waves. */
+body { transition: background-color .4s ease; }
+body.app-open { background: var(--app-bg, var(--night)); }
+body.app-open #waves, body.app-open .ambient, body.app-open .grain { visibility: hidden; }
 
 /* The app window. At home it's shrunk with a transform onto the card slot (so the app inside
    keeps its full-screen layout and just looks smaller); Start removes the transform. */
@@ -275,6 +281,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
   var reducedMQ = matchMedia('(prefers-reduced-motion: reduce)');
   var fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
   var root = document.documentElement;
+  var themeMeta = document.querySelector('meta[name="theme-color"]'), themeDefault = themeMeta.content;
   var shelfEl = document.getElementById('shelf'), dotsEl = document.getElementById('dots');
   var buttons = LIST.map(function (a, i) {
     var b = document.createElement('button'), ic = document.createElement('span'), img = document.createElement('img'), lbl = document.createElement('span');
@@ -307,12 +314,45 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
       fr.loaded = true;
       if (sel === id) splash.classList.add('gone');
       fr.waiters.splice(0).forEach(function (fn) { fn(); });
+      if (open === id) paintBehind(id);
+      watchBackground(id);
       // Esc inside the app also goes home (works for apps served from this site).
       if (!a.ownsEsc) try { fr.el.contentWindow.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !e.defaultPrevented && open === id) home(); }); } catch (err) { /* another origin */ }
     }, { once: true });
     fr.el.src = a.url;
     framesEl.appendChild(fr.el);
     return (frames[id] = fr);
+  }
+
+  // The colour of an app's own page (its body, else its html), or '' when it can't be read.
+  function bgOf(id) {
+    var fr = frames[id];
+    if (!fr || !fr.loaded) return '';
+    try {
+      var d = fr.el.contentDocument, w = fr.el.contentWindow;
+      for (var i = 0, els = [d.body, d.documentElement]; i < els.length; i++) {
+        var c = els[i] && w.getComputedStyle(els[i]).backgroundColor;
+        if (c && c !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(c)) return c;
+      }
+    } catch (e) { /* another origin */ }
+    return '';
+  }
+  // Paint the page behind the window with the open app's colour (or the launcher's at home).
+  function paintBehind(id) {
+    var c = id ? bgOf(id) : '';
+    if (c) root.style.setProperty('--app-bg', c); else root.style.removeProperty('--app-bg');
+    themeMeta.content = c || themeDefault;
+  }
+  // Follow the app when it changes its own theme (a light/dark toggle, or the system's).
+  function watchBackground(id) {
+    try {
+      var w = frames[id].el.contentWindow, d = w.document;
+      var again = function () { if (open === id) requestAnimationFrame(function () { paintBehind(id); }); };
+      var mo = new w.MutationObserver(again);
+      [d.documentElement, d.body].forEach(function (el) { if (el) mo.observe(el, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] }); });
+      var mq = w.matchMedia('(prefers-color-scheme: dark)');
+      if (mq.addEventListener) mq.addEventListener('change', again);
+    } catch (e) { /* another origin */ }
   }
 
   // The window's own size. Usually the screen; in split view (unfolded Duo and other small
@@ -390,6 +430,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     win.classList.remove('preview'); win.removeAttribute('aria-hidden');
     document.body.classList.add('app-open');
     placeOpen();
+    paintBehind(id);
     var fr = frames[id];
     fr.el.tabIndex = 0; $('homeBtn').tabIndex = 0; $('newTab').tabIndex = 0; dots.forEach(function (d) { d.tabIndex = 0; });
     setTimeout(function () {
@@ -410,6 +451,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     frames[id].el.tabIndex = -1; $('homeBtn').tabIndex = -1; $('newTab').tabIndex = -1; dots.forEach(function (d) { d.tabIndex = -1; });
     win.classList.add('preview'); win.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('app-open');
+    paintBehind(null);
     placeCard();
     setTimeout(function () {
       win.classList.remove('instant'); open = null; busy = false; pushed = false;
@@ -429,6 +471,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     prev.el.tabIndex = -1;
     select(id, { force: true });
     open = id;
+    paintBehind(id);
     history.replaceState({ app: id }, '', '#' + id);
     var fr = frames[id];
     fr.el.tabIndex = 0;
