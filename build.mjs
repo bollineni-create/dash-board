@@ -3,7 +3,7 @@
 // .github/workflows/sync-apps.yml), else the latest, into public/<id>/ and its icon into public/icons/. The launcher
 // page gets the list of apps written into it, so apps.json is the one place to add an app.
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { extname } from 'node:path';
 
 const OUT = 'public', SRC = '.src';
@@ -25,6 +25,9 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(`${OUT}/icons`, { recursive: true });
 cpSync('site', OUT, { recursive: true });
 
+const SITE_ICONS = ['<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+  '<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">',
+  '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'].join('\n');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const shelf = [];
 for (const a of apps) {
@@ -61,6 +64,17 @@ for (const a of apps) {
     if (first < 0) throw new Error(`${a.id}: index.html has no script tag to put the hosted config before.`);
     writeFileSync(`${dest}/index.html`, html.slice(0, first) + '<script src="hosted-config.js"></script>\n  ' + html.slice(first));
     console.log(`${a.id}: server keys ${Object.keys(serverKeys).join(', ') || 'none'}`);
+  }
+
+  // Every app page wears the site's "b" icon in the tab and on the home screen, so the
+  // whole site reads as one place. The app's own icon still shows on the launcher shelf.
+  for (const f of readdirSync(dest).filter((n) => n.endsWith('.html'))) {
+    const html = readFileSync(`${dest}/${f}`, 'utf8');
+    if (!html.includes('</head>')) continue;
+    writeFileSync(`${dest}/${f}`, html
+      .replace(/[ \t]*<link\b(?:"[^"]*"|'[^']*'|[^'">])*>[ \t]*\r?\n?/gi,
+        (tag) => /\brel\s*=\s*["']?(?:shortcut icon|icon|apple-touch-icon(?:-precomposed)?|mask-icon)["'\s>]/i.test(tag) ? '' : tag)
+      .replace('</head>', `${SITE_ICONS}\n</head>`));
   }
 
   // Icons come straight from each app's repo, so they stay current.
