@@ -3,10 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>bollineni-create</title>
-<meta name="description" content="Apps by bollineni-create: {{APP_NAMES}}.">
-<meta name="theme-color" content="#0B0F1E">
-<link rel="icon" href="{{FAVICON}}">
+<title>bollineni.co</title>
+<meta name="description" content="{{APP_NAMES}}: apps that run right in your browser. Tap one and go.">
+<meta name="theme-color" content="#070A14">
+<link rel="canonical" href="https://bollineni.co/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="apple-mobile-web-app-title" content="bollineni">
+<!-- link previews (iMessage, Slack, X, etc.) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="bollineni.co">
+<meta property="og:url" content="https://bollineni.co/">
+<meta property="og:title" content="bollineni.co">
+<meta property="og:description" content="Car deals, a time-travel globe, and more. Tap one and go.">
+<meta property="og:image" content="https://bollineni.co/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="bollineni.co: Gridline, Palimpsest, Ballast, Rounds and Loom">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="bollineni.co">
+<meta name="twitter:description" content="Car deals, a time-travel globe, and more. Tap one and go.">
+<meta name="twitter:image" content="https://bollineni.co/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -41,35 +61,35 @@ button { font: inherit; color: inherit; }
 .grain { position: fixed; inset: 0; pointer-events: none; opacity: .06; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 
-.status { position: fixed; top: 0; left: 0; right: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center;
-  padding: calc(16px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) 0 max(24px, env(safe-area-inset-left, 0px));
+/* The status bar holds the app icons on the left and the clock on the right, both on one
+   centre line, with the same side margins as the page below. */
+.status { position: fixed; top: 0; left: 0; right: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; gap: 24px;
+  padding: calc(22px + env(safe-area-inset-top, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-right, 0px)) 0 max(clamp(20px, 5vw, 72px), env(safe-area-inset-left, 0px));
   font-family: var(--mono); font-size: 13px; color: var(--muted); letter-spacing: .04em; }
-.status .who { color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: .01em; display: flex; align-items: center; gap: 10px; }
-.status .who i { width: 9px; height: 9px; border-radius: 50%; background: var(--tint); box-shadow: 0 0 12px var(--tint); transition: background .6s, box-shadow .6s; }
-.status .right { display: flex; gap: 14px; align-items: center; }
+.status .right { flex: none; display: flex; gap: 14px; align-items: center; }
 .batt { width: 26px; height: 12px; border: 1.5px solid var(--muted); border-radius: 3px; position: relative; }
 .batt::before { content: ""; position: absolute; inset: 1.5px; right: 5px; background: var(--muted); border-radius: 1px; }
 .batt::after { content: ""; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: var(--muted); border-radius: 0 1px 1px 0; }
 
 /* layout: the icon shelf on top, the pitch on the left, the live card on the right */
 .home { position: fixed; inset: 0; z-index: 2; display: grid; gap: clamp(20px, 4vh, 44px);
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas: "shelf shelf" "hero slot"; align-items: center;
-  padding: calc(64px + env(safe-area-inset-top, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-left, 0px)); }
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "hero slot"; align-items: center;
+  padding: calc(136px + env(safe-area-inset-top, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-left, 0px)); }
 @media (max-width: 760px) {
-  .home { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: "shelf" "slot" "hero"; align-content: start; gap: 22px; overflow-y: auto; }
+  .home { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; grid-template-areas: "slot" "hero"; padding-top: calc(96px + env(safe-area-inset-top, 0px)); align-content: start; gap: 22px; overflow-y: auto; }
 }
-.shelf { grid-area: shelf; display: flex; gap: 18px; align-items: flex-end; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
-  padding: 40px 16px; margin: -40px -16px; }
+.shelf { flex: 0 1 auto; display: flex; gap: 18px; align-items: center; height: 76px; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  padding: 40px 16px; margin: -40px -16px; box-sizing: content-box; }
 .shelf::-webkit-scrollbar { display: none; }
-.app { flex: none; background: none; border: 0; padding: 0; cursor: pointer; display: grid; justify-items: center; gap: 10px; }
-.icon { width: 64px; aspect-ratio: 1; border-radius: 24%; overflow: hidden; position: relative; opacity: .62;
+.app { flex: none; position: relative; background: none; border: 0; padding: 0; cursor: pointer; display: grid; justify-items: center; }
+.icon { width: 56px; aspect-ratio: 1; border-radius: 24%; overflow: hidden; position: relative; opacity: .62;
   box-shadow: 0 10px 24px rgb(0 0 0 / .45), 0 0 0 1px rgb(255 255 255 / .08);
   transition: width .45s var(--ease), opacity .3s, box-shadow .45s; }
 .icon img { width: 100%; height: 100%; display: block; }
-.app .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); opacity: 0; transform: translateY(-4px); transition: opacity .3s, transform .3s; }
+.app .lbl { position: absolute; top: calc(100% + 8px); left: 50%; translate: -50% 0; white-space: nowrap; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); opacity: 0; transform: translateY(-4px); transition: opacity .3s, transform .3s; }
 .app:hover .icon { opacity: .9; }
-.app.sel .icon { width: 92px; opacity: 1; box-shadow: 0 18px 40px rgb(0 0 0 / .5), 0 0 0 3px var(--tint), 0 0 36px color-mix(in srgb, var(--tint) 55%, transparent); }
+.app.sel .icon { width: 76px; opacity: 1; box-shadow: 0 18px 40px rgb(0 0 0 / .5), 0 0 0 3px var(--tint), 0 0 36px color-mix(in srgb, var(--tint) 55%, transparent); }
 .app.sel .lbl { opacity: 1; transform: none; color: var(--ink); }
 .app:focus-visible { outline: none; }
 .app:focus-visible .icon { outline: 2px solid var(--ink); outline-offset: 3px; }
@@ -92,8 +112,8 @@ button { font: inherit; color: inherit; }
 .hero.swap > :nth-child(2) { animation-delay: .03s; } .hero.swap > :nth-child(3) { animation-delay: .06s; } .hero.swap > :nth-child(4) { animation-delay: .09s; } .hero.swap > :nth-child(5) { animation-delay: .12s; }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
-.slot { grid-area: slot; justify-self: end; align-self: center; width: min(100%, calc((100vh - 230px) * var(--var, 1.6))); aspect-ratio: var(--va, 16 / 10); }
-@media (max-width: 760px) { .slot { justify-self: center; width: min(100%, calc((100dvh - 450px) * var(--var, .5))); min-width: min(170px, 100%); } .home { gap: 16px; } .shelf { margin-bottom: -28px; } .hero h1 { font-size: 46px; } .hero { gap: 10px; } .chips { display: none; } .icon { width: 50px; } .app.sel .icon { width: 68px; } .app .lbl { display: none; } .status #clock .d { display: none; } }
+.slot { grid-area: slot; justify-self: end; align-self: center; width: min(100%, calc((100vh - 220px) * var(--var, 1.6))); aspect-ratio: var(--va, 16 / 10); }
+@media (max-width: 760px) { .slot { justify-self: center; width: min(100%, calc((100dvh - 390px) * var(--var, .5))); min-width: min(170px, 100%); } .home { gap: 16px; } .status { padding-top: calc(14px + env(safe-area-inset-top, 0px)); gap: 12px; } .shelf { height: 56px; gap: 10px; padding-right: 8px; margin-right: 0; } .status .batt { display: none; } .hero h1 { font-size: 46px; } .hero { gap: 10px; } .chips { display: none; } .icon { width: 38px; } .app.sel .icon { width: 52px; } .app .lbl { display: none; } .status #clock .d { display: none; } }
 .card-hit { position: fixed; z-index: 7; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 20px; }
 .card-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; }
 .reflect { position: fixed; z-index: 1; pointer-events: none; border-radius: 50%; filter: blur(40px); opacity: .55;
@@ -101,18 +121,20 @@ button { font: inherit; color: inherit; }
 
 .hint { position: fixed; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; z-index: 3; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .05em; }
 .hint kbd { font-family: inherit; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; margin: 0 2px; }
+/* Unfolded iPhone Duo (626x890) and other small tablets: room for bigger icons and the full clock. */
+@media (min-width: 600px) and (max-width: 760px) and (min-height: 700px) { .shelf { height: 64px; gap: 14px; } .icon { width: 46px; } .app.sel .icon { width: 62px; } .status #clock .d { display: inline; } .status .batt { display: block; } .chips { display: flex; } .hero h1 { font-size: 56px; } }
 @media (max-width: 760px) and (max-height: 700px) { .home { padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); } }
 /* Short landscape (folded iPhone Duo on its side, phones in landscape): card and text side by side, no scrolling. */
 @media (orientation: landscape) and (max-height: 520px) {
-  .home { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "shelf shelf" "hero slot"; align-content: stretch; gap: 10px 24px; overflow: hidden;
-    padding-top: calc(50px + env(safe-area-inset-top, 0px)); padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
-  .slot { justify-self: end; align-self: center; width: min(100%, calc((100dvh - 150px) * var(--var, 1.6))); min-width: 0; }
+  .home { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "hero slot"; align-content: stretch; gap: 10px 24px; overflow: hidden;
+    padding-top: calc(72px + env(safe-area-inset-top, 0px)); padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+  .slot { justify-self: end; align-self: center; width: min(100%, calc((100dvh - 110px) * var(--var, 1.6))); min-width: 0; }
   .hero { gap: 8px; align-content: center; }
   .hero h1 { font-size: clamp(30px, 9vh, 46px); }
   .hero p { font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .chips { display: none; } .kind { font-size: 11px; }
   .start { padding: 10px 22px; font-size: 15px; }
-  .shelf { margin-bottom: -30px; } .icon { width: 42px; } .app.sel .icon { width: 54px; } .app .lbl { display: none; }
+  .status { padding-top: calc(10px + env(safe-area-inset-top, 0px)); } .shelf { height: 48px; gap: 12px; } .icon { width: 36px; } .app.sel .icon { width: 48px; } .app .lbl { display: none; }
 }
 @media (max-width: 760px), (pointer: coarse) { .hint { display: none; } }
 
@@ -174,21 +196,24 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
 </script>
 <script defer src="/_vercel/insights/script.js"></script>
+<script>
+  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
 <body>
 <canvas id="waves" aria-hidden="true"></canvas>
 <div class="ambient"></div>
 <div class="grain" aria-hidden="true"></div>
 <div class="reflect" id="reflect" aria-hidden="true"></div>
-<div class="boot" aria-hidden="true"><b>bollineni-create</b></div>
+<div class="boot" aria-hidden="true"><b>bollineni.co</b></div>
 
 <header class="status">
-  <span class="who"><i></i>bollineni-create</span>
+  <nav class="shelf" id="shelf" aria-label="Apps"></nav>
   <span class="right"><span id="clock">--:--</span><span class="batt" aria-hidden="true"></span></span>
 </header>
 
 <main class="home" id="home">
-  <nav class="shelf" id="shelf" aria-label="Apps"></nav>
   <section class="hero" id="hero" aria-live="polite">
     <div class="kind" id="kind"></div>
     <h1 id="title"></h1>
