@@ -78,7 +78,6 @@ const page = readFileSync(pagePath, 'utf8');
 if (!page.includes('/*APPS*/[]')) throw new Error('site/index.html: no /*APPS*/[] placeholder.');
 writeFileSync(pagePath, page
   .replace('/*APPS*/[]', JSON.stringify(shelf).replace(/</g, '\\u003c'))
-  .replaceAll('{{FAVICON}}', esc(shelf[0].icon))
   .replaceAll('{{APP_NAMES}}', esc(shelf.map((a) => a.name).join(', '))));
 
 console.log(`Built ${shelf.length} apps: ${shelf.map((a) => a.id).join(', ')}`);
