@@ -184,11 +184,22 @@ body.app-open #waves, body.app-open .ambient, body.app-open .grain { visibility:
 .window.preview { pointer-events: none; }
 .window.instant { transition: none; }
 body.app-open .window { box-shadow: none; }
+/* The bar takes the open app's own colour (set by paintBehind). Safari tints its toolbars and the
+   strips around the page (the iPhone Duo's side rail, the bottom bar) from the top of the page,
+   so a dark bar over a light app would frame it in dark bands and make it look cut off. */
 .bar { position: relative; z-index: 5; display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); background: var(--deep); border-bottom: 1px solid var(--line); }
+/* Only while an app is open, so the home-screen card's bar always keeps the launcher's dark look.
+   Background and ink switch together (no fade), so the labels never sit on a half-faded bar. */
+body.app-open .bar[data-tone] { background: var(--app-bg); color: var(--ink); }
+body.app-open .bar[data-tone="light"] { --ink: #121826; --muted: #5B6478; --chip: rgb(0 0 0 / .05); --line: rgb(0 0 0 / .1); }
+body.app-open .bar[data-tone="dark"] { --ink: #F1F4FF; --muted: #A2ACC8; --chip: rgb(255 255 255 / .08); --line: rgb(255 255 255 / .13); }
 .bar img { width: 22px; height: 22px; border-radius: 6px; }
 .bar .t { font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nt-short { display: none; }
 @media (max-width: 520px) { .nt-long { display: none; } .nt-short { display: inline; font-size: 15px; line-height: 1; } }
+/* Phone-width screens (the folded iPhone Duo beside Safari's rail is ~380px): the icon names the
+   app, so drop the name rather than squeeze it to one letter, and tighten the bar. */
+@media (max-width: 440px) { .bar { gap: 8px; } .bar .t { display: none; } .bar .pill { padding: 6px 11px; } .dots button { width: 18px; } }
 .bar .sp { flex: 1; }
 .bar { touch-action: pan-y; }
 .dots { display: flex; gap: 2px; align-items: center; }
@@ -319,7 +330,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
       if (!a.ownsEsc) try { fr.el.contentWindow.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !e.defaultPrevented && open === id) home(); }); } catch (err) { /* another origin */ }
     }, { once: true });
     // On every load (the first, and any later navigation or reload inside the app), follow its colour
-    fr.el.addEventListener('load', function () { if (open === id) paintBehind(id); watchBackground(id); });
+    fr.el.addEventListener('load', function () { if (isShowing(id)) paintBehind(id); watchBackground(id); });
     fr.el.src = a.url;
     framesEl.appendChild(fr.el);
     return (frames[id] = fr);
@@ -338,17 +349,31 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     } catch (e) { /* another origin */ }
     return '';
   }
+  // True while this app fills the screen. `open` stays set through the closing animation, so a late
+  // load or theme change mustn't repaint the launcher in the app's colours then.
+  function isShowing(id) { return open === id && document.body.classList.contains('app-open'); }
   // Paint the page behind the window with the open app's colour (or the launcher's at home).
   function paintBehind(id) {
     var c = id ? bgOf(id) : '';
     if (c) root.style.setProperty('--app-bg', c); else root.style.removeProperty('--app-bg');
     themeMeta.content = c || themeDefault;
+    // The bar wears the same colour, with ink that reads on it.
+    var bar = document.querySelector('.bar'), tone = toneOf(c);
+    if (tone) bar.dataset.tone = tone; else delete bar.dataset.tone;
+  }
+  // 'light' or 'dark' for an rgb()/rgba() colour, '' if it can't be read.
+  function toneOf(c) {
+    var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/.exec(c || '');
+    if (!m) return '';
+    var lin = function (v) { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+    var L = .2126 * lin(+m[1]) + .7152 * lin(+m[2]) + .0722 * lin(+m[3]);
+    return L > .4 ? 'light' : 'dark';
   }
   // Follow the app when it changes its own theme (a light/dark toggle, or the system's).
   function watchBackground(id) {
     try {
       var w = frames[id].el.contentWindow, d = w.document;
-      var again = function () { if (open === id) requestAnimationFrame(function () { paintBehind(id); }); };
+      var again = function () { if (isShowing(id)) requestAnimationFrame(function () { if (isShowing(id)) paintBehind(id); }); };
       var mo = new w.MutationObserver(again);
       [d.documentElement, d.body].forEach(function (el) { if (el) mo.observe(el, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] }); });
       var mq = w.matchMedia('(prefers-color-scheme: dark)');
