@@ -63,7 +63,7 @@ jobs:
               // older commit never counts: the agent doesn't always re-decide after a push, and its
               // check run completing says nothing about when its decision lands. A review can't wake
               // this job safely (pull_request_review would run the PR's own copy of this file), so when
-              // Cursor's suite for this commit woke us we wait here for the decision${'' if f=='slipway.yml' else ', and the schedule below sweeps up any that land later'}.
+              // Cursor's suite for this commit woke us we wait here for the decision, and the schedule above sweeps up any that land later.
               const fromAgent = (r) => /Sent by Cursor Approval Agent/.test(r.body || '');
               const cursorVerdict = async () => {
                 const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
