@@ -25,9 +25,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Gates that must report success on the PR's newest commit, as "name@source": a check
-      # run from that GitHub App (github-actions, cursor), or "@status" for a commit status.
+      # run from that GitHub App (github-actions, cursor), or "@status:<app>" for a commit status
+      # posted by that app's bot account (e.g. Vercel@status:vercel means vercel[bot]).
       # A required gate that hasn't reported counts as pending; neutral or skipped is a fail.
-      REQUIRED_CHECKS: "Vercel@status, Cursor Bugbot@cursor, Cursor Security Agent: Security Reviewer@cursor"
+      REQUIRED_CHECKS: "Vercel@status:vercel, Cursor Bugbot@cursor, Cursor Security Agent: Security Reviewer@cursor"
     steps:
       - uses: actions/github-script@v7
         with:
@@ -89,11 +90,16 @@ jobs:
               }
               // Required gates must come from the expected source and end in success. Not yet
               // reported counts as pending; a same-named check from another app doesn't count.
+              let statusList; // newest first
               for (const { name, source } of REQUIRED) {
-                if (source === 'status') {
-                  const st = combined.statuses.find((s) => s.context === name);
-                  if (!st) pending.push(`${name} (not started)`);
-                  else if (st.state !== 'success' && st.state !== 'pending') failed.push(name);
+                if (source.startsWith('status:')) {
+                  // Commit statuses aren't bound to an app (anyone with statuses: write can post any
+                  // context), so only count the newest one posted by that app's own bot account.
+                  const bot = `${source.slice(7)}[bot]`;
+                  statusList ??= await github.paginate(github.rest.repos.listCommitStatusesForRef, { owner, repo, ref: sha, per_page: 100 });
+                  const st = statusList.find((s) => s.context === name && s.creator?.login === bot);
+                  if (!st || st.state === 'pending') pending.push(`${name}${st ? '' : ' (not started)'}`);
+                  else if (st.state !== 'success') failed.push(`${name} (${st.state})`);
                   continue;
                 }
                 const mine = runs.filter((r) => r.name === name && r.app?.slug === source);
