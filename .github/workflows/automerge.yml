@@ -37,15 +37,12 @@ jobs:
             const OK = ['success', 'neutral', 'skipped'];
             const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean)
               .map((spec) => { const at = spec.lastIndexOf('@'); return { name: spec.slice(0, at), source: spec.slice(at + 1) }; });
-            // True only when this run was woken by Cursor's check suite for this exact commit
-            // and that suite's approval agent run concluded success.
             const AGENT = 'Cursor Approval Agent: Pull Request Router and Approver';
             const suite = context.eventName === 'check_suite' ? context.payload.check_suite : null;
-            const approvalJustRan = async (sha) => {
-              if (suite?.app?.slug !== 'cursor' || suite.head_sha !== sha) return false;
-              const runs = await github.paginate(github.rest.checks.listForSuite, { owner, repo, check_suite_id: suite.id, per_page: 100 });
-              return runs.some((r) => r.name === AGENT && r.conclusion === 'success');
-            };
+            // How long after the approval agent finishes before its verdict is trusted, so a review it
+            // posted is surely visible in the reviews list (it lands ~4s before the check completes).
+            const SETTLE_MS = 45000;
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
             // Never check out or run the PR's code here: this job holds a write token.
             const candidates = context.payload.pull_request
               ? [context.payload.pull_request]
@@ -59,29 +56,28 @@ jobs:
               // Cursor's latest verdict must be an approval that covers the newest commit. Its approval
               // agent re-runs on every push: it posts a "Not approved" comment when it declines, but when
               // it still approves it often just keeps its earlier approval without posting a new one. So
-              // the verdict is Cursor's newest approval, change request or approval-agent comment, and an
-              // approval of an older commit still counts once the agent has run green on this commit
-              // after it. A review can't trigger this workflow safely (it would run the PR's own copy),
-              // so we rely on the check suite Cursor completes once its approval agent has run (~3s
-              // after it reviews). For that suite's own commit, look again briefly in case the review
-              // isn't visible yet.
+              // the verdict is Cursor's newest approval, change request or approval-agent comment. An
+              // approval of this commit counts as is; one of an older commit counts only once the agent
+              // has run green on this commit after it AND that run has settled for SETTLE_MS, so a
+              // "Not approved" it posted can't be missed by a lagging reviews list. A review can't
+              // trigger this workflow safely (it would run the PR's own copy): the check suite Cursor
+              // completes after its agent runs wakes us, and for that suite's own commit we wait out
+              // the settle time here; other PRs are left for their own suite's run.
               const fromAgent = (r) => /Sent by Cursor Approval Agent/.test(r.body || '');
               const cursorVerdict = async () => {
                 const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
                 return reviews.filter((r) => r.user?.login === 'cursor[bot]' && (['APPROVED', 'CHANGES_REQUESTED'].includes(r.state) || fromAgent(r))).pop();
               };
-              const agentRuns = (await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, check_name: AGENT, per_page: 100 }))
-                .filter((r) => r.app?.slug === 'cursor' && r.status === 'completed' && r.conclusion === 'success');
-              const approved = (v) => v?.state === 'APPROVED' && (v.commit_id === sha
-                || agentRuns.some((r) => new Date(r.completed_at) > new Date(v.submitted_at)));
-              let verdict = await cursorVerdict();
-              if (!approved(verdict) && await approvalJustRan(sha)) {
-                for (let i = 0; i < 6 && !approved(verdict); i++) {
-                  await new Promise((r) => setTimeout(r, 5000));
-                  verdict = await cursorVerdict();
-                }
-              }
-              if (!approved(verdict)) {
+              const agentDone = (await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, check_name: AGENT, per_page: 100 }))
+                .filter((r) => r.app?.slug === 'cursor' && r.status === 'completed' && r.conclusion === 'success')
+                .map((r) => Date.parse(r.completed_at));
+              const lastAgent = agentDone.length ? Math.max(...agentDone) : 0;
+              const wokenForThis = suite?.app?.slug === 'cursor' && suite.head_sha === sha;
+              if (wokenForThis && lastAgent && Date.now() - lastAgent < SETTLE_MS) await sleep(SETTLE_MS - (Date.now() - lastAgent));
+              const verdict = await cursorVerdict();
+              const approved = verdict?.state === 'APPROVED' && (verdict.commit_id === sha
+                || agentDone.some((t) => t > Date.parse(verdict.submitted_at) && Date.now() - t >= SETTLE_MS));
+              if (!approved) {
                 core.info(`#${number}: waiting for Cursor to approve ${sha.slice(0, 7)}`);
                 continue;
               }
