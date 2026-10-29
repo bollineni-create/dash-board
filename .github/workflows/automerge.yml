@@ -3,14 +3,17 @@
 # for changes or pushes a fix, nothing merges until it approves the newest commit.
 name: Auto-merge after Cursor approves
 # Every trigger runs the copy of this file on the default branch, never a PR's own copy,
-# so a PR cannot edit this workflow to merge itself. Cursor's approval agent completes a
-# check suite a few seconds after it posts its approval, which is what wakes this up.
+# so a PR cannot edit this workflow to merge itself. Cursor's check suite finishing wakes
+# this up (and the run then waits for Cursor's decision); the 10-minute schedule catches a
+# decision that lands later. Scheduled runs are free on this public repository.
 on:
   pull_request_target:
     types: [ready_for_review]
   check_suite:
     types: [completed]
   status: {}
+  schedule:
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 permissions:
   contents: write
@@ -23,6 +26,7 @@ concurrency:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       # Gates that must report success on the PR's newest commit, as "name@source": a check
       # run from that GitHub App (github-actions, cursor), or "@status:<app>" for a commit status
@@ -39,9 +43,10 @@ jobs:
               .map((spec) => { const at = spec.lastIndexOf('@'); return { name: spec.slice(0, at), source: spec.slice(at + 1) }; });
             const AGENT = 'Cursor Approval Agent: Pull Request Router and Approver';
             const suite = context.eventName === 'check_suite' ? context.payload.check_suite : null;
-            // How long after the approval agent finishes before its verdict is trusted, so a review it
-            // posted is surely visible in the reviews list (it lands ~4s before the check completes).
-            const SETTLE_MS = 45000;
+            // Cursor's approval agent posts its decision up to several minutes after its check run
+            // completes (it waits for Bugbot first). When Cursor's suite for a PR's newest commit wakes
+            // this job, keep reading reviews for up to this long for its decision on that commit.
+            const DECISION_WAIT_MS = 9 * 60 * 1000;
             const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
             // Never check out or run the PR's code here: this job holds a write token.
             const candidates = context.payload.pull_request
@@ -53,31 +58,25 @@ jobs:
               if (pr.head.repo.full_name !== `${owner}/${repo}`) continue; // never merge forks
               const sha = pr.head.sha;
 
-              // Cursor's latest verdict must be an approval that covers the newest commit. Its approval
-              // agent re-runs on every push: it posts a "Not approved" comment when it declines, but when
-              // it still approves it often just keeps its earlier approval without posting a new one. So
-              // the verdict is Cursor's newest approval, change request or approval-agent comment. An
-              // approval of this commit counts as is; one of an older commit counts only once the agent
-              // has run green on this commit after it AND that run has settled for SETTLE_MS, so a
-              // "Not approved" it posted can't be missed by a lagging reviews list. A review can't
-              // trigger this workflow safely (it would run the PR's own copy): the check suite Cursor
-              // completes after its agent runs wakes us, and for that suite's own commit we wait out
-              // the settle time here; other PRs are left for their own suite's run.
+              // Cursor's newest verdict (an approval, a change request, or its approval agent's
+              // "Not approved" comment) must be an approval of this exact commit. An approval of an
+              // older commit never counts: the agent doesn't always re-decide after a push, and its
+              // check run completing says nothing about when its decision lands. A review can't wake
+              // this job safely (pull_request_review would run the PR's own copy of this file), so when
+              // Cursor's suite for this commit woke us we wait here for the decision${'' if f=='slipway.yml' else ', and the schedule below sweeps up any that land later'}.
               const fromAgent = (r) => /Sent by Cursor Approval Agent/.test(r.body || '');
               const cursorVerdict = async () => {
                 const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
                 return reviews.filter((r) => r.user?.login === 'cursor[bot]' && (['APPROVED', 'CHANGES_REQUESTED'].includes(r.state) || fromAgent(r))).pop();
               };
-              const agentDone = (await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, check_name: AGENT, per_page: 100 }))
-                .filter((r) => r.app?.slug === 'cursor' && r.status === 'completed' && r.conclusion === 'success')
-                .map((r) => Date.parse(r.completed_at));
-              const lastAgent = agentDone.length ? Math.max(...agentDone) : 0;
-              const wokenForThis = suite?.app?.slug === 'cursor' && suite.head_sha === sha;
-              if (wokenForThis && lastAgent && Date.now() - lastAgent < SETTLE_MS) await sleep(SETTLE_MS - (Date.now() - lastAgent));
-              const verdict = await cursorVerdict();
-              const approved = verdict?.state === 'APPROVED' && (verdict.commit_id === sha
-                || agentDone.some((t) => t > Date.parse(verdict.submitted_at) && Date.now() - t >= SETTLE_MS));
-              if (!approved) {
+              let verdict = await cursorVerdict();
+              if (suite?.app?.slug === 'cursor' && suite.head_sha === sha) {
+                for (const until = Date.now() + DECISION_WAIT_MS; verdict?.commit_id !== sha && Date.now() < until;) {
+                  await sleep(20000);
+                  verdict = await cursorVerdict();
+                }
+              }
+              if (verdict?.state !== 'APPROVED' || verdict.commit_id !== sha) {
                 core.info(`#${number}: waiting for Cursor to approve ${sha.slice(0, 7)}`);
                 continue;
               }
