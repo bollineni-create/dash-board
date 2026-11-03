@@ -114,7 +114,15 @@ button { font: inherit; color: inherit; }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 .slot { grid-area: slot; justify-self: end; align-self: center; width: min(100%, calc((100vh - 220px) * var(--var, 1.6))); aspect-ratio: var(--va, 16 / 10); }
-@media (max-width: 760px) { .slot { justify-self: center; width: min(100%, calc((100dvh - 390px) * var(--var, .5))); min-width: min(170px, 100%); } .home { gap: 16px; } .status { padding-top: calc(14px + env(safe-area-inset-top, 0px)); gap: 12px; } .shelf { height: 56px; gap: 10px; padding-right: 8px; margin-right: 0; } .status .batt { display: none; } .hero h1 { font-size: 46px; } .hero { gap: 10px; } .chips { display: none; } .icon { width: 38px; } .app.sel .icon { width: 52px; } .app .lbl { display: none; } .status #clock .d { display: none; } }
+/* Phone-width screens (folded iPhone Duo, with or without Safari's side rail; regular phones): the
+   card fills the full width and the space left by the text, showing the top of the app close to its
+   real size (placeCard clips the scaled window to the card), instead of a small whole-screen thumbnail. */
+@media (max-width: 760px) { .home { grid-template-rows: minmax(160px, 1fr) auto; align-content: stretch; overflow: hidden; padding-bottom: max(18px, env(safe-area-inset-bottom, 0px)); }
+  .slot { justify-self: stretch; align-self: stretch; width: 100%; height: 100%; min-width: 0; aspect-ratio: auto; }
+  .hero h1 { font-size: clamp(32px, 9vw, 46px) !important; } .kind { font-size: 11px; }
+  .hero p { font-size: 14.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .actions { margin-top: 2px; } .start { padding: 12px 24px; font-size: 16px; } }
+@media (max-width: 760px) { .home { gap: 16px; } .status { padding-top: calc(14px + env(safe-area-inset-top, 0px)); gap: 12px; } .shelf { height: 56px; gap: 10px; padding-right: 8px; margin-right: 0; } .status .batt { display: none; } .hero { gap: 8px; } .chips { display: none; } .icon { width: 38px; } .app.sel .icon { width: 52px; } .app .lbl { display: none; } .status #clock .d { display: none; } }
 .card-hit { position: fixed; z-index: 7; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 20px; }
 .card-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; }
 .reflect { position: fixed; z-index: 1; pointer-events: none; border-radius: 50%; filter: blur(40px); opacity: .55;
@@ -142,7 +150,7 @@ button { font: inherit; color: inherit; }
   .app .lbl { display: block; position: static; translate: none; transform: none; opacity: 1; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; transition: opacity .3s; }
   .home { left: var(--rail); grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "hero" "slot"; align-content: stretch; overflow: hidden; gap: 22px;
     padding: calc(30px + env(safe-area-inset-top, 0px)) max(26px, env(safe-area-inset-right, 0px)) calc(26px + env(safe-area-inset-bottom, 0px)) 26px; }
-  .hero { gap: 12px; max-width: none; } .hero h1 { font-size: 54px; } .chips { display: flex; }
+  .hero { gap: 12px; max-width: none; } .hero h1 { font-size: 54px !important; } .hero p { display: block; } .chips { display: flex; }
   .slot { justify-self: center; align-self: stretch; width: auto; height: 100%; max-width: 100%; min-width: 0; aspect-ratio: var(--va); }
   nav.dots { display: none; }
   /* app open: the rail stays, folded to icons */
@@ -155,9 +163,9 @@ button { font: inherit; color: inherit; }
 @media (orientation: landscape) and (max-height: 520px) {
   .home { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "hero slot"; align-content: stretch; gap: 10px 24px; overflow: hidden;
     padding-top: calc(72px + env(safe-area-inset-top, 0px)); padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
-  .slot { justify-self: end; align-self: center; width: min(100%, calc((100dvh - 110px) * var(--var, 1.6))); min-width: 0; }
+  .slot { justify-self: end; align-self: center; width: min(100%, calc((100dvh - 110px) * var(--var, 1.6))); height: auto; min-width: 0; aspect-ratio: var(--va, 16 / 10); }
   .hero { gap: 8px; align-content: center; }
-  .hero h1 { font-size: clamp(30px, 9vh, 46px); }
+  .hero h1 { font-size: clamp(30px, 9vh, 46px) !important; }
   .hero p { font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .chips { display: none; } .kind { font-size: 11px; }
   .start { padding: 10px 22px; font-size: 15px; }
@@ -178,9 +186,9 @@ body.app-open #waves, body.app-open .ambient, body.app-open .grain { visibility:
 /* The app window. At home it's shrunk with a transform onto the card slot (so the app inside
    keeps its full-screen layout and just looks smaller); Start removes the transform. */
 .window { position: fixed; left: 0; top: 0; width: var(--win-w, 100vw); height: 100vh; height: var(--win-h, 100dvh); z-index: 6; background: var(--deep); display: flex; flex-direction: column;
-  overflow: hidden; transform-origin: 0 0; transform: var(--card, none); border-radius: var(--card-r, 0px);
+  overflow: hidden; transform-origin: 0 0; transform: var(--card, none); border-radius: var(--card-r, 0px); clip-path: var(--clip, inset(0px 0px 0px 0px round 0px));
   box-shadow: 0 40px 120px rgb(0 0 0 / .55), 0 0 0 1px rgb(255 255 255 / .1);
-  transition: transform .6s var(--ease), border-radius .6s var(--ease), box-shadow .6s; will-change: transform; }
+  transition: transform .6s var(--ease), border-radius .6s var(--ease), box-shadow .6s, clip-path .6s var(--ease); will-change: transform; }
 .window.preview { pointer-events: none; }
 .window.instant { transition: none; }
 body.app-open .window { box-shadow: none; }
@@ -399,6 +407,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     root.style.setProperty('--va', v.w + ' / ' + v.h);
     root.style.setProperty('--var', String(v.w / v.h));
     root.style.setProperty('--card', v.x ? 'translate(' + v.x + 'px,0px)' : 'none'); root.style.setProperty('--card-r', '0px');
+    root.style.setProperty('--clip', 'inset(0px 0px 0px 0px round 0px)');
   }
 
   // Map the window onto the card slot with one transform.
@@ -407,8 +416,11 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     root.style.setProperty('--va', v.w + ' / ' + v.h);
     root.style.setProperty('--var', String(v.w / v.h));
     var r = slot.getBoundingClientRect(), s = r.width / v.w, ch = v.h * s;
+    // A card shorter than the scaled screen (phone widths) shows the top of the app, clipped.
+    var cut = r.height > 0 && r.height < ch - 1 ? v.h - r.height / s : 0; ch = Math.min(ch, v.h * s - cut * s);
     root.style.setProperty('--card', 'translate(' + r.left + 'px,' + r.top + 'px) scale(' + s + ')');
     root.style.setProperty('--card-r', (20 / s) + 'px');
+    root.style.setProperty('--clip', 'inset(0px 0px ' + cut + 'px 0px round ' + (20 / s) + 'px)');
     Object.assign(cardHit.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: ch + 'px' });
     Object.assign(reflect.style, { left: (r.left + r.width * .1) + 'px', top: (r.top + ch * .85) + 'px', width: (r.width * .8) + 'px', height: (r.width * .25) + 'px' });
   }
