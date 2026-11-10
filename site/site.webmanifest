@@ -1,7 +1,8 @@
 {
   "name": "bollineni.co",
   "short_name": "bollineni",
-  "start_url": "/",
+  "start_url": "/apps",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#070A14",
   "theme_color": "#070A14",
