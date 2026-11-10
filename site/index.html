@@ -23,8 +23,15 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <script>
-  // Old links to an app (bollineni.co/#gridline) now live under /apps.
-  (function () { var ids = /*APP_IDS*/[]; var h = location.hash.slice(1); if (h && ids.indexOf(h) > -1) location.replace('/apps#' + h); })();
+  // Old links to an app (bollineni.co/#gridline) now live under /apps, and home-screen
+  // installs made before the move (iOS keeps the URL saved at install, "/") still open the
+  // launcher: a page running standalone is an installed app, never a LinkedIn visitor.
+  (function () {
+    var ids = /*APP_IDS*/[]; var h = location.hash.slice(1);
+    if (h && ids.indexOf(h) > -1) { location.replace('/apps#' + h); return; }
+    var standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (standalone) location.replace('/apps');
+  })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
