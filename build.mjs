@@ -1,13 +1,15 @@
-// Build: copy the launcher page into public/, then for every app in apps.json pull its
-// code from GitHub at the commit in `commit` (a hand pin) or apps.lock.json (kept current by
-// .github/workflows/sync-apps.yml), else the latest, into public/<id>/ and its icon into public/icons/. The launcher
-// page gets the list of apps written into it, so apps.json is the one place to add an app.
+// Build: copy the site into public/, then for every app in apps.json pull its code from GitHub
+// at the commit in `commit` (a hand pin) or apps.lock.json (kept current by
+// .github/workflows/sync-apps.yml), else the latest, into public/<id>/ and its icon into public/icons/.
+// The front page (the resume, whose Apps section is the launcher) gets the list of apps written
+// into it, so apps.json is the one place to add an app.
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { extname } from 'node:path';
 
 const OUT = 'public', SRC = '.src';
-const RESERVED = new Set(['api', 'icons', 'legal', 'apps', 'fonts']);
+// Folders the site already uses, and the front page's own anchors (bollineni.co/#apps): an app's id is its address and its #link.
+const RESERVED = new Set(['api', 'icons', 'legal', 'apps', 'fonts', 'top', 'main', 'record', 'experience', 'research', 'education', 'leadership']);
 const apps = JSON.parse(readFileSync('apps.json', 'utf8'));
 const lock = existsSync('apps.lock.json') ? JSON.parse(readFileSync('apps.lock.json', 'utf8')) : {};
 
@@ -110,29 +112,25 @@ for (const a of apps) {
     pitch: a.pitch, chips: a.chips || [], tint: a.tint, wash: a.wash, ownsEsc: !!a.ownsEsc, archived: !!a.archived });
 }
 
-// The launcher lives at /apps; the site's front page (site/index.html) is Naren's resume.
-const pagePath = `${OUT}/apps/index.html`;
-const page = readFileSync(pagePath, 'utf8');
-if (!page.includes('/*APPS*/[]')) throw new Error('site/apps/index.html: no /*APPS*/[] placeholder.');
-writeFileSync(pagePath, page
-  .replace('/*APPS*/[]', JSON.stringify(shelf).replace(/</g, '\\u003c'))
-  .replaceAll('{{APP_NAMES}}', esc(shelf.map((a) => a.name).join(', '))));
-
-// Old links like bollineni.co/#gridline still open the app: the resume page forwards
-// any app hash to /apps#<id>, so it needs the list of app ids.
-// The resume also shows every app as a tile in its Apps section, in the app's own colours,
-// so a new entry in apps.json appears there too. Each tile opens the app in the launcher.
+// The launcher is the Apps section of the front page (site/index.html, Naren's resume). The page
+// gets three things written in: the full list for the launcher's script, the ids for the script
+// in its head (a link like bollineni.co/#gridline opens that app), and a tab for each app. A tab
+// is a plain link to the app's own page, so it works before the script runs and without it.
 const hex = (c, field, id) => { if (!/^#[0-9a-f]{3,8}$/i.test(c)) throw new Error(`apps.json: "${id}" has a "${field}" that is not a hex colour.`); return c; };
-const tiles = shelf.map((a) => `<a class="app" href="/apps#${a.id}" style="--tint:${hex(a.tint, 'tint', a.id)};--wash:${hex(a.wash, 'wash', a.id)}">`
-  + `<span class="app-icon"><img src="${esc(a.icon)}" alt="" width="60" height="60" loading="lazy"${a.iconStyle ? ` style="${esc(a.iconStyle)}"` : ''}></span>`
-  + `<span class="app-name">${esc(a.name)}${a.archived && !/archived/i.test(a.kind) ? '<em>Archived</em>' : ''}</span>`
-  + `<span class="app-kind">${esc(a.kind)}</span>`
-  + `<span class="app-pitch">${esc(a.pitch)}</span></a>`).join('\n        ');
+const tabs = shelf.map((a) => `<a class="tab" href="${esc(a.url)}" data-app="${a.id}" style="--t:${hex(a.tint, 'tint', a.id)}">`
+  + `<span class="icon"><img src="${esc(a.icon)}" alt="" width="40" height="40"${a.iconStyle ? ` style="${esc(a.iconStyle)}"` : ''}></span>`
+  + `<span class="lbl">${esc(a.name)}</span><span class="k">${esc(a.kind)}</span></a>`).join('\n          ');
+for (const a of shelf) hex(a.wash, 'wash', a.id);
 const homePath = `${OUT}/index.html`;
 const home = readFileSync(homePath, 'utf8');
-for (const mark of ['/*APP_IDS*/[]', '<!--APP_TILES-->']) if (!home.includes(mark)) throw new Error(`site/index.html: no ${mark} placeholder.`);
+for (const mark of ['/*APP_IDS*/[]', '/*APPS*/[]', '<!--APP_TABS-->']) if (!home.includes(mark)) throw new Error(`site/index.html: no ${mark} placeholder.`);
 writeFileSync(homePath, home
   .replace('/*APP_IDS*/[]', JSON.stringify(shelf.map((a) => a.id)))
-  .replace('<!--APP_TILES-->', () => tiles));
+  .replace('/*APPS*/[]', () => JSON.stringify(shelf).replace(/</g, '\\u003c'))
+  .replace('<!--APP_TABS-->', () => tabs));
+
+// /apps was the launcher's own page. It now forwards to the front page, keeping any #app link.
+const oldPath = `${OUT}/apps/index.html`;
+writeFileSync(oldPath, readFileSync(oldPath, 'utf8').replaceAll('{{APP_NAMES}}', esc(shelf.map((a) => a.name).join(', '))));
 
 console.log(`Built ${shelf.length} apps: ${shelf.map((a) => a.id).join(', ')}`);

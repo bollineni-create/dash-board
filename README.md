@@ -1,22 +1,22 @@
 # bollineni-create launcher
 
-bollineni.co's front page is Naren's resume (`site/index.html`), shared from LinkedIn only and kept out of search engines (noindex meta tag plus an `X-Robots-Tag` header in `vercel.json`). The console-style app launcher lives at https://bollineni.co/apps (`site/apps/index.html`); old links like `bollineni.co/#gridline` forward to `/apps#gridline`.
+bollineni.co is one page (`site/index.html`): Naren's resume, with the app launcher as its Apps section. It is shared from LinkedIn only and kept out of search engines (noindex meta tag plus an `X-Robots-Tag` header in `vercel.json`). The launcher wears the resume's look: black ground, white Archivo, square corners, and the chosen app's colour as the only colour in it. `bollineni.co/#gridline` opens Gridline over the page. The old launcher address, `/apps`, forwards here (`/apps#gridline` still opens Gridline).
 
-- `apps.json`: the list of apps on the shelf.
-- `site/index.html`: the resume (front page). Its Apps section shows a tile for every app in `apps.json`, in the app's own colours; the build writes the tiles in.
-- `site/fonts/archivo.woff2`: the resume's typeface (Archivo, SIL Open Font License), served from the site so the page makes no outside font request.
-- `site/apps/index.html`: the launcher page.
-- `build.mjs`: pulls each app from GitHub into `public/<id>/` and writes the shelf into the launcher and the app tiles into the resume.
+- `apps.json`: the list of apps in the launcher.
+- `site/index.html`: the page. The build writes the app list into its launcher and a tab for every app in `apps.json`.
+- `site/fonts/archivo.woff2`: the page's typeface (Archivo, SIL Open Font License), served from the site so the page makes no outside font request.
+- `site/apps/index.html`: forwards the old `/apps` address to the front page.
+- `build.mjs`: pulls each app from GitHub into `public/<id>/` and writes the apps into the front page.
 - `api/relay.js`: the server relay that adds API keys to an app's requests.
 - `vercel.json`: Vercel config. It runs `node build.mjs` on every deploy, and sets the security headers and caching.
 
 ## Using it
 
-- **Choose an app:** swipe the shelf left or right, scroll sideways on a trackpad, use the ← → keys, or tap an icon.
-- **Start an app:** Start or Enter. Each app gets its own address (`/#gridline`), so you can link straight to an app.
-- **Switch apps while one is open:** swipe the top bar, tap a dot, or use ← →.
-- **Go back:** ← Launcher, Esc, or the browser's Back button.
-- **Preloading:** the selected app and the apps next to it load in the background, unless the phone is on Data Saver or a slow connection.
+- **Choose an app:** click its tab in the Apps section, use ← → with a tab focused, swipe across the card, or scroll sideways on a trackpad.
+- **Start an app:** Start, or click the card. It opens full screen over the resume. Each app gets its own address (`/#gridline`), so you can link straight to an app.
+- **Switch apps while one is open:** swipe the top bar or tap a dot. On the unfolded iPhone Duo, a rail of icons down the left does it.
+- **Go back to the resume:** ← Apps, Esc, or the browser's Back button.
+- **Loading:** nothing loads until the Apps section is near the screen. Then the selected app loads, and once you've used the launcher the apps next to it load in the background, unless the phone is on Data Saver or a slow connection.
 
 ## Keeping apps up to date
 
@@ -28,7 +28,7 @@ Vercel has to be connected to this repo (Project → Settings → Git) for a pus
 
 ## Adding an app
 
-Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, the swipe order, the switcher dots and the app's address automatically. The resume's Apps section gets a tile for it too.
+Add an entry to `apps.json`, then deploy. The launcher picks up the new tab, the swipe order, the switcher dots and the app's address automatically.
 
 ```json
 {
@@ -49,7 +49,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not `api`, `apps`, `fonts`, `icons` or `legal`. |
+| `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not a folder the site uses (`api`, `apps`, `fonts`, `icons`, `legal`) or one of the front page's own anchors (`top`, `main`, `record`, `experience`, `research`, `education`, `leadership`). |
 | `repo` | A public git URL. The site follows the app's default branch: see [Keeping apps up to date](#keeping-apps-up-to-date). |
 | `icon` | Path inside the app's repo. |
 | `tint`, `wash` | The accent colour and the dark background tint shown while the app is selected. |
