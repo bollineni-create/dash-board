@@ -2,7 +2,7 @@
   "id": "/",
   "name": "bollineni.co",
   "short_name": "bollineni",
-  "start_url": "/apps",
+  "start_url": "/#apps",
   "scope": "/",
   "display": "standalone",
   "background_color": "#000000",

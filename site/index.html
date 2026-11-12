@@ -23,31 +23,39 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <script>
-  // Old links to an app (bollineni.co/#gridline) now live under /apps, and home-screen
-  // installs made before the move (iOS keeps the URL saved at install, "/") still open the
-  // launcher: a page running standalone is an installed app, never a LinkedIn visitor.
-  // The one exception is someone who tapped "← Resume" in the launcher: they asked for this page.
+  // A link to an app (bollineni.co/#gridline) opens that app over this page: hide the page until it's up.
+  // A copy installed on a phone's home screen is there for the apps, so it starts at them.
   (function () {
     var ids = /*APP_IDS*/[]; var h = location.hash.slice(1);
-    if (h && ids.indexOf(h) > -1) { location.replace('/apps#' + h); return; }
+    if (h && ids.indexOf(h) > -1) {
+      document.documentElement.classList.add('opening');
+      setTimeout(function () { document.documentElement.classList.remove('opening'); }, 4000); // never leave the page hidden if the launcher fails
+      return;
+    }
     var standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-    var fromLauncher = document.referrer.indexOf(location.origin + '/apps') === 0;
-    if (standalone && !fromLauncher) location.replace('/apps');
+    if (standalone && !h) {
+      location.replace('#apps');
+      addEventListener('DOMContentLoaded', function () { var el = document.getElementById('apps'); if (el && scrollY < 4) el.scrollIntoView({ behavior: 'instant' }); });
+    }
   })();
 </script>
+<link rel="manifest" href="/site.webmanifest">
+<meta name="apple-mobile-web-app-title" content="bollineni">
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));</script>
 <link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* Swiss Tombstone: white page, black type, one red accent, deal-tombstone stat boxes.
    One typeface (Archivo, served from /fonts) in two widths: wide and heavy for the name,
    the figures and the headings; regular for reading. The only other colour on the page
-   belongs to the apps: each tile lights up in its own tint. */
+   belongs to the apps: in the launcher at the bottom, the chosen app shows in its own tint. */
 @font-face { font-family: "Archivo"; src: url("/fonts/archivo.woff2") format("woff2");
   font-weight: 100 900; font-stretch: 62% 125%; font-style: normal; font-display: swap; }
 :root { color-scheme: light; --ink: #000; --body: #262626; --quiet: #5E5E5E; --paper: #fff; --red: #D62E1F;
-  --night-line: #303030; --night-quiet: #A8A8A8; --night-body: #DADADA;
+  --night-line: #303030; --night-quiet: #A8A8A8; --night-body: #DADADA; --tint: #fff; --wash: #1a1a1a; --ease: cubic-bezier(.32,.72,0,1);
   --sans: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --side: max(32px, env(safe-area-inset-left), env(safe-area-inset-right)); --bar: 57px; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: calc(var(--bar) + env(safe-area-inset-top) + 20px); }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 var(--sans); -webkit-font-smoothing: antialiased; overflow-wrap: anywhere; }
 a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
@@ -117,25 +125,109 @@ dl { margin: 0; display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: 1
 dt { font-weight: 600; font-size: 15px; padding-top: 2px; }
 dd { margin: 0; color: var(--body); }
 
-/* Apps: the one dark room on the page, and the only place with colour */
+/* Apps: the one dark room on the page, and the only place with colour. It is a launcher:
+   pick an app in the tab row, the card beside its name is that app, already running, and
+   Start zooms the card up to fill the screen. Only the chosen app is in colour: its icon,
+   the mark under its tab, the period after its name and the frame round its card. */
 .night { margin-top: 104px; background: var(--ink); color: var(--paper); padding: 84px 0 88px; }
 .night-top { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px 24px; align-items: end; }
 .night-top h2 { grid-column: span 4; }
-.night-top p { grid-column: span 5; margin: 0; color: var(--night-body); max-width: 30em; }
-.night-top .btn { grid-column: span 3; justify-self: end; background: var(--paper); border-color: var(--paper); }
-.night-top .btn:hover { background: var(--red); border-color: var(--red); }
-.apps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 40px; }
-.app { --tint: #fff; --wash: #1a1a1a; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 4px 18px; align-content: start; padding: 22px; min-height: 196px;
-  border: 1px solid var(--night-line); color: var(--paper); text-decoration: none; transition: background .25s, border-color .25s; }
-.app:hover, .app:focus-visible { color: var(--paper); background: var(--wash); border-color: var(--tint); }
-.app:focus-visible { outline-color: var(--tint); }
-.app-icon { grid-row: span 2; width: 60px; height: 60px; border-radius: 24%; overflow: hidden; }
-.app-icon img { width: 100%; height: 100%; display: block; }
-.app-name { align-self: end; font-size: 23px; font-weight: 800; font-stretch: 112%; letter-spacing: -.03em; line-height: 1.1; }
-.app-name em { font-style: normal; font-stretch: 100%; font-weight: 500; font-size: 12.5px; letter-spacing: 0; margin-left: 8px; padding: 2px 7px; border: 1px solid var(--night-line); color: var(--night-quiet); vertical-align: 3px; white-space: nowrap; }
-.app-kind { font-size: 14px; color: var(--tint); }
-.app-pitch { grid-column: 1 / -1; margin-top: 14px; font-size: 15.5px; line-height: 1.5; color: var(--night-body); }
-.also { margin-top: 44px; border-top: 1px solid var(--night-line); }
+.night-top p { grid-column: span 6; margin: 0; color: var(--night-body); max-width: 32em; }
+.launcher { margin-top: 44px; }
+.shelf { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border-bottom: 2px solid var(--paper); }
+.tab { --t: #fff; position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px 14px 0; color: var(--night-quiet);
+  font-size: 15.5px; font-weight: 600; text-decoration: none; cursor: pointer; transition: color .2s; }
+.tab::after { content: ""; position: absolute; left: 0; right: 14px; bottom: -2px; height: 4px; background: var(--t); transform: scaleX(0); transform-origin: left; transition: transform .3s var(--ease); }
+.tab:hover, .tab[aria-selected="true"] { color: var(--paper); }
+.tab[aria-selected="true"]::after { transform: none; }
+.tab:focus-visible { outline-color: var(--paper); outline-offset: -2px; }
+.icon { flex: none; display: block; width: 40px; aspect-ratio: 1; border-radius: 24%; overflow: hidden; opacity: .6; filter: grayscale(1); transition: opacity .25s, filter .25s; }
+.icon img { width: 100%; height: 100%; display: block; }
+.tab:hover .icon { opacity: .9; }
+.tab[aria-selected="true"] .icon, .shelf:not([role]) .icon, [aria-current="true"] > .icon { opacity: 1; filter: none; }
+.tab .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab .k { display: none; }
+
+/* The name hangs from the card's top edge; the pitch and Start sit on its bottom edge. */
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); column-gap: clamp(24px, 4vw, 56px); margin-top: 40px; }
+.pitch { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pitch h3 { margin: -.125em 0 0 -.06em; font-size: clamp(40px, 5.4vw, 84px); font-weight: 900; font-stretch: 125%; line-height: .9; letter-spacing: -.055em; white-space: nowrap; }
+.pitch h3 i { font-style: normal; color: var(--tint); transition: color .4s; }
+.kind { font-size: 15px; font-weight: 500; color: var(--tint); transition: color .4s; }
+.pitch p { margin: auto 0 0; padding-top: 12px; max-width: 34em; line-height: 1.5; color: var(--night-body); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips span { font-size: 12.5px; font-weight: 500; line-height: 1.4; padding: 3px 8px; border: 1px solid var(--night-line); color: var(--night-quiet); }
+.go { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; margin-top: 8px; }
+.start { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 26px; border: 2px solid var(--paper); border-radius: 0; background: var(--paper); color: var(--ink);
+  font: 800 16px/1 var(--sans); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.start:hover { background: var(--red); border-color: var(--red); color: var(--paper); }
+.start svg { width: 13px; height: 13px; }
+.start:focus-visible { outline-color: var(--paper); }
+.ghost { font-size: 14.5px; font-weight: 500; color: var(--night-quiet); }
+.ghost:hover { color: var(--paper); }
+.pitch.swap > * { animation: lift .45s var(--ease) both; }
+.pitch.swap > :nth-child(2) { animation-delay: .03s; } .pitch.swap > :nth-child(3) { animation-delay: .06s; } .pitch.swap > :nth-child(4) { animation-delay: .09s; } .pitch.swap > :nth-child(5) { animation-delay: .12s; }
+@keyframes lift { from { opacity: 0; transform: translateY(12px); } }
+
+/* The card. The slot is the screen in miniature; a slot shorter than that (phones) shows the top of the app.
+   While its app is open the slot stays behind as an empty frame for the window to fly back to. */
+.slot { position: relative; align-self: center; width: 100%; aspect-ratio: var(--va, 16 / 10); max-height: 74vh; overflow: hidden; background: var(--wash); transition: background .6s; }
+.card-hit { position: absolute; inset: 0; z-index: 2; border: 2px solid var(--tint); border-radius: 0; padding: 0; background: transparent; cursor: pointer; transition: border-color .4s; }
+.card-hit:focus-visible { outline: 2px solid var(--paper); outline-offset: -8px; }
+/* The app's window is as big as the screen all along and shrunk onto the slot with a transform,
+   so the app inside keeps its full-screen layout and Start only has to undo the transform.
+   Open, it is fixed over the page. No ancestor may get a transform, filter or container-type:
+   that would trap the fixed window inside it. */
+.window { --w-ink: #fff; --w-muted: #A8A8A8; --w-line: #303030; position: absolute; left: 0; top: 0; z-index: 1; width: var(--win-w, 100vw); height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column; overflow: hidden; background: #000; color: var(--w-ink); font-size: 14.5px; line-height: 1.5;
+  transform-origin: 0 0; transform: var(--card, scale(.5)); clip-path: var(--clip, inset(0px 0px 0px 0px)); transition: transform .6s var(--ease), clip-path .6s var(--ease); will-change: transform; }
+.window.preview { pointer-events: none; }
+.window.open { position: fixed; z-index: 50; }
+.window.instant { transition: none; }
+/* The bar takes the open app's own colour (set by paintBehind). Safari tints its toolbars and the
+   strips around the page (the iPhone Duo's side rail, the bottom bar) from the top of the page,
+   so a dark bar over a light app would frame it in dark bands and make it look cut off. */
+.winbar { position: relative; z-index: 5; display: flex; align-items: center; gap: 10px; touch-action: pan-y; background: #000; border-bottom: 1px solid var(--w-line);
+  padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); }
+html.app-open .winbar[data-tone] { background: var(--app-bg); }
+html.app-open .winbar[data-tone="light"] { --w-ink: #000; --w-muted: #5E5E5E; --w-line: rgb(0 0 0 / .22); color: var(--w-ink); }
+html.app-open .winbar[data-tone="dark"] { --w-ink: #fff; --w-muted: #A8A8A8; --w-line: rgb(255 255 255 / .24); color: var(--w-ink); }
+.winbar img { width: 22px; height: 22px; border-radius: 24%; }
+.winbar .t { font-weight: 800; font-stretch: 112%; letter-spacing: -.02em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.winbar .sp { flex: 1; }
+.nt-short { display: none; }
+.dots { display: flex; gap: 2px; align-items: center; }
+.dots button { width: 22px; height: 28px; border: 0; padding: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+.dots button::before { content: ""; width: 7px; height: 7px; background: var(--w-muted); opacity: .5; transition: width .3s var(--ease), opacity .3s, background .3s; }
+.dots button[aria-current="true"]::before { width: 18px; opacity: 1; background: var(--tint); }
+.dots:has(button:only-child) { display: none; }
+.pill { border: 1px solid var(--w-line); background: transparent; border-radius: 0; padding: 6px 12px; font: 600 13px/1.25 var(--sans); cursor: pointer; text-decoration: none; color: var(--w-ink); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px; transition: border-color .15s; }
+.pill:hover { border-color: var(--w-ink); color: var(--w-ink); }
+.window :focus-visible { outline-color: var(--w-ink); }
+.frames { flex: 1; position: relative; min-height: 0; }
+.frames iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility 0s .35s; }
+.frames iframe.active { opacity: 1; visibility: visible; transition: opacity .35s ease, visibility 0s; }
+.splash { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: var(--wash); transition: opacity .35s ease, background .6s; pointer-events: none; }
+.splash img { width: 96px; height: 96px; border-radius: 24%; animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(.94); opacity: .8; } }
+.splash.gone { opacity: 0; } .splash.gone img { animation: none; }
+/* An app is open: the page behind stops scrolling, and anything past its edges takes the app's colour. */
+html.app-open, html.app-open body { overflow: hidden; }
+html.app-open { background: var(--app-bg, #000); }
+/* A link straight to an app (bollineni.co/#gridline): keep the resume out of sight until the app is up. */
+html.opening { background: #000; } html.opening body { visibility: hidden; } html.opening .window.open { visibility: visible; }
+/* Unfolded iPhone Duo and other small tablets: an open app shares the screen with a rail of icons for switching. */
+.rail { display: none; }
+@media (min-width: 600px) and (max-width: 760px) and (min-height: 700px) {
+  html.app-open .rail { position: fixed; left: 0; top: 0; bottom: 0; z-index: 51; width: 72px; display: flex; flex-direction: column; gap: 8px; overflow: hidden auto;
+    padding: calc(18px + env(safe-area-inset-top, 0px)) 0 18px; background: #000; border-right: 2px solid #fff; }
+  .rail button { position: relative; flex: none; width: 100%; padding: 4px 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+  .rail button[aria-current="true"]::after { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; background: var(--tint); }
+  .rail button:focus-visible { outline-color: #fff; outline-offset: -3px; }
+  .dots { display: none; }
+}
+.also { margin-top: 56px; border-top: 1px solid var(--night-line); }
 .also .row { border-color: var(--night-line); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px 24px; align-items: baseline; padding: 18px 0; }
 .also h3 { grid-column: span 4; font-size: 19px; }
 .also p { grid-column: span 6; margin: 0; color: var(--night-body); font-size: 15.5px; }
@@ -160,8 +252,16 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .split > h2 { position: static; padding: 0 0 18px; }
   .night { margin-top: 80px; padding: 64px 0; }
   .night-top h2, .night-top p { grid-column: 1 / -1; }
-  .night-top .btn { grid-column: 1 / -1; justify-self: start; }
-  .apps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Tabs become a row of icons; the card moves under the text and shows the top of the app. */
+  .shelf { display: flex; }
+  .tab { flex: 0 1 64px; justify-content: center; padding: 10px 0 12px; }
+  .tab::after { left: 8px; right: 8px; transform-origin: center; }
+  .tab .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .stage { grid-template-columns: minmax(0, 1fr); row-gap: 28px; margin-top: 30px; }
+  .pitch h3 { margin-top: 0; font-size: clamp(36px, 10.5vw, 64px); }
+  .pitch p { margin-top: 0; padding-top: 2px; }
+  .slot { max-height: 66vh; max-height: 66svh; }
+  .also { margin-top: 44px; }
   .also h3, .also p { grid-column: 1 / -1; } .also .links { grid-column: 1 / -1; text-align: left; margin-top: 4px; }
   .contact { margin-top: 56px; }
 }
@@ -184,22 +284,25 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .tomb b { grid-area: figure; font-size: 34px; text-align: right; }
   .split { margin-top: 64px; }
   .night { margin-top: 64px; padding: 52px 0 56px; }
-  .apps { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 28px; }
-  .app { min-height: 0; padding: 18px; grid-template-columns: 52px minmax(0, 1fr); gap: 2px 14px; }
-  .app-icon { width: 52px; height: 52px; } .app-name { font-size: 21px; } .app-pitch { margin-top: 10px; font-size: 15px; }
+  .launcher { margin-top: 30px; } .stage { margin-top: 24px; row-gap: 24px; }
+  .tab .icon { width: 36px; }
+  .start { min-height: 48px; padding: 0 22px; }
+  .nt-long { display: none; } .nt-short { display: inline; font-size: 15px; line-height: 1; }
+  .winbar { gap: 8px; } .winbar .t { display: none; } .winbar .pill { padding: 6px 10px; } .dots button { width: 18px; }
   dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } dd { margin-bottom: 10px; }
   .contact { margin-top: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  h1 .ln > span { animation: none; } .btn, .app { transition: none; }
+  h1 .ln > span { animation: none; } .btn, .start, .pill, .tab, .tab::after, .icon, .window, .splash, .frames iframe, .slot { transition: none !important; }
+  .pitch.swap > *, .splash img { animation: none !important; }
 }
 /* Printing (Cmd/Ctrl+P): compact, ink-only */
 @media print {
   @page { margin: 13mm; }
   body { font-size: 9.5pt; line-height: 1.38; }
   .wrap { padding: 0; max-width: none; }
-  .bar, .actions, .noprint, footer, .night-top .btn, .app-icon, .app-pitch, .contact { display: none !important; }
+  .bar, .actions, .noprint, footer, .stage, .rail, .icon, .contact { display: none !important; }
   .print-only { display: block; grid-column: 1 / -1; margin: 0; font-size: 9.5pt; }
   .hero { padding-top: 0; }
   h1 { font-size: 30pt; margin: 0; letter-spacing: -.04em; } h1 br { display: none; } h1 .ln { display: inline; overflow: visible; } h1 .ln > span { display: inline; animation: none; }
@@ -218,9 +321,9 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   dl { max-width: none; gap: 2px 16px; margin-top: 4px; } dt { font-size: 9pt; }
   .night { margin-top: 12px; padding: 0; background: #fff; color: #000; }
   .night-top { display: block; } .night-top p { color: #000; max-width: none; margin-top: 3px; }
-  .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 16px; margin-top: 5px; }
-  .app { display: block; min-height: 0; padding: 0; border: 0; color: #000; }
-  .app-name { font-size: 10pt; } .app-name em { display: none; } .app-kind { display: block; font-size: 8.5pt; color: #333; }
+  .launcher { margin-top: 5px; } .shelf { display: grid; grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 16px; border: 0; }
+  .tab { display: block; padding: 0; color: #000; font-size: 10pt; font-weight: 700; } .tab::after { display: none; }
+  .tab .lbl { position: static; width: auto; height: auto; clip-path: none; } .tab .k { display: block; font-size: 8.5pt; font-weight: 400; color: #333; }
   .also { margin-top: 5px; border: 0; } .also .row { display: block; padding: 2px 0; border: 0; }
   .also h3 { display: inline; font-size: 10pt; margin-right: .5em; } .also p { display: inline; color: #000; font-size: 9.5pt; } .also .links { display: none; }
   a { text-decoration: none; }
@@ -366,10 +469,39 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     <div class="wrap">
       <div class="night-top">
         <h2 class="wide">Apps</h2>
-        <p>Browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo.</p>
-        <a class="btn noprint" href="/apps">Open the launcher</a>
+        <p>Browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo. <span class="noprint">Pick one and press Start: it opens right here.</span></p>
       </div>
-      <div class="apps"><!--APP_TILES--></div>
+      <div class="launcher" id="launcher">
+        <nav class="shelf" id="shelf" aria-label="Apps">
+        <!--APP_TABS-->
+        </nav>
+        <div class="stage" id="stage" hidden>
+          <div class="pitch" id="pitch" aria-live="polite">
+            <h3 id="appName"></h3>
+            <div class="kind" id="appKind"></div>
+            <p id="appPitch"></p>
+            <div class="chips" id="appChips"></div>
+            <div class="go">
+              <button class="start" id="start" type="button"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg><span id="startLbl">Start</span></button>
+              <a class="ghost" id="ghost" target="_blank" rel="noopener">Open in a new tab</a>
+            </div>
+          </div>
+          <div class="slot" id="slot">
+            <section class="window preview" id="win" aria-label="App" aria-hidden="true" inert>
+              <div class="winbar">
+                <button class="pill" id="homeBtn" type="button" title="Back to the resume (Esc)" tabindex="-1">← Apps</button>
+                <img id="winIcon" alt=""><span class="t" id="winName"></span>
+                <span class="sp"></span>
+                <nav class="dots" id="dots" aria-label="Switch app"></nav>
+                <a class="pill" id="newTab" target="_blank" rel="noopener" tabindex="-1" aria-label="Open in a new tab"><span class="nt-long">Open in new tab</span><span class="nt-short" aria-hidden="true">↗</span></a>
+              </div>
+              <div class="frames" id="frames"></div>
+              <div class="splash" id="splash"><img id="splashIcon" alt=""></div>
+            </section>
+            <button class="card-hit" id="cardHit" type="button" aria-label="Open the app"></button>
+          </div>
+        </div>
+      </div>
       <div class="also">
         <div class="row"><h3>StudyBuddy</h3><p>Microsoft hackathon project lead: a classroom app on Azure with a GPT-4 tutor for students.</p><span class="links noprint"><span class="when">2023</span><a href="https://github.com/ammarali0416/StudyBuddy" rel="noopener">Code</a></span></div>
       </div>
@@ -386,11 +518,11 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       <nav aria-label="Elsewhere">
         <a href="https://www.linkedin.com/in/narenbollineni/" rel="noopener">LinkedIn</a>
         <a href="https://github.com/bollineni-create" rel="noopener">GitHub</a>
-        <a href="/apps">bollineni.co/apps</a>
       </nav>
     </footer>
   </div>
 </main>
+<nav class="rail" id="rail" aria-label="Switch app"></nav>
 
 <script>
 (function () {
@@ -426,6 +558,346 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       run.observe(tombs);
     }
   }
+})();
+
+// The Apps section is a launcher. Its tabs choose an app, the card shows that app already
+// running, and Start zooms the card up to fill the screen, over the resume. Each app gets one
+// iframe, made the first time it's needed and kept afterwards.
+(function () {
+  // Written in by build.mjs from apps.json. ownsEsc: the app uses Esc itself, so Esc inside it stays with the app.
+  var LIST = /*APPS*/[];
+  var $ = function (id) { return document.getElementById(id); };
+  var root = document.documentElement, shelfEl = $('shelf'), stage = $('stage');
+  var APPS = {}, order = LIST.map(function (a) { APPS[a.id] = a; return a.id; });
+  var tabs = shelfEl ? order.map(function (id) { return shelfEl.querySelector('[data-app="' + id + '"]'); }) : [];
+  if (!order.length || !stage || tabs.indexOf(null) > -1) { root.classList.remove('opening'); return; }
+
+  var reducedMQ = matchMedia('(prefers-reduced-motion: reduce)');
+  var themeMeta = document.querySelector('meta[name="theme-color"]'), themeDefault = themeMeta.content;
+  var win = $('win'), winbar = win.querySelector('.winbar'), framesEl = $('frames'), splash = $('splash'), slot = $('slot');
+  var pitchEl = $('pitch'), nameEl = $('appName'), cardHit = $('cardHit'), dotsEl = $('dots'), railEl = $('rail');
+  var sel = null, open = null, busy = false, pushed = false;
+  var armed = false;   // apps load only once the section is near the screen: most visitors come for the resume
+  var touched = false; // and the selected app's neighbours only once someone has used the launcher
+  var DUR = 600;
+
+  shelfEl.setAttribute('role', 'tablist'); stage.setAttribute('role', 'tabpanel'); stage.hidden = false;
+  tabs.forEach(function (t, i) {
+    t.setAttribute('role', 'tab'); t.setAttribute('aria-controls', 'stage'); t.setAttribute('aria-label', LIST[i].name);
+    t.addEventListener('click', function (e) {
+      // Ctrl/Cmd/Shift/middle click keeps its usual meaning: the tab is a link to the app's own page.
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+      e.preventDefault(); touched = true; select(order[i]);
+    });
+  });
+  shelfEl.addEventListener('keydown', function (e) {
+    var n = order.length, i = order.indexOf(sel);
+    if (e.key === 'ArrowRight') i = (i + 1) % n; else if (e.key === 'ArrowLeft') i = (i - 1 + n) % n;
+    else if (e.key === 'Home') i = 0; else if (e.key === 'End') i = n - 1;
+    else if (e.key === ' ' && e.target.closest('.tab')) i = tabs.indexOf(e.target.closest('.tab'));
+    else return;
+    e.preventDefault(); touched = true; select(order[i]); tabs[i].focus();
+  });
+  // While an app is open: dots in its bar, and on the unfolded Duo a rail of icons, switch to another.
+  var switcher = function (a, el) { el.type = 'button'; el.setAttribute('aria-label', a.name); el.addEventListener('click', function () { if (open && open !== a.id) switchTo(a.id); }); return el; };
+  var dots = LIST.map(function (a) { var d = switcher(a, document.createElement('button')); d.tabIndex = -1; dotsEl.appendChild(d); return d; });
+  var rails = LIST.map(function (a) {
+    var b = switcher(a, document.createElement('button')), ic = document.createElement('span'), img = document.createElement('img');
+    ic.className = 'icon'; img.src = a.icon; img.alt = ''; if (a.iconStyle) img.style.cssText = a.iconStyle;
+    ic.appendChild(img); b.appendChild(ic); railEl.appendChild(b); return b;
+  });
+
+  var frames = {};
+  function warm(id) {
+    if (frames[id] || !APPS[id]) return frames[id];
+    var a = APPS[id], fr = { el: document.createElement('iframe'), loaded: false, waiters: [] };
+    fr.el.title = a.name; fr.el.referrerPolicy = 'no-referrer'; fr.el.allow = 'clipboard-write';
+    fr.el.tabIndex = -1;
+    fr.el.addEventListener('load', function () {
+      fr.loaded = true;
+      if (sel === id) splash.classList.add('gone');
+      fr.waiters.splice(0).forEach(function (fn) { fn(); });
+      // Esc inside the app also closes it (works for apps served from this site).
+      if (!a.ownsEsc) try { fr.el.contentWindow.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !e.defaultPrevented && open === id) home(); }); } catch (err) { /* another origin */ }
+    }, { once: true });
+    // On every load (the first, and any later navigation or reload inside the app), follow its colour
+    fr.el.addEventListener('load', function () { if (isShowing(id)) paintBehind(id); watchBackground(id); });
+    fr.el.src = a.url;
+    fr.el.classList.toggle('active', sel === id);
+    framesEl.appendChild(fr.el);
+    return (frames[id] = fr);
+  }
+  // Load the selected app; its neighbours follow once it's in, so the next tab lands on an app
+  // that's already running. Only neighbours: loading every app at once would be too much for a phone.
+  function arm() {
+    armed = true;
+    var fr = warm(sel);
+    splash.classList.toggle('gone', fr.loaded);
+    if (fr.loaded) warmNeighbours(); else fr.waiters.push(warmNeighbours);
+  }
+  function warmNeighbours() {
+    var conn = navigator.connection || {}, lean = conn.saveData || /2g/.test(conn.effectiveType || '');
+    var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1200); };
+    var n = order.length, i = order.indexOf(open || sel);
+    if (!touched || lean || n < 2 || i < 0) return;
+    var queue = [order[(i + 1) % n], order[(i - 1 + n) % n]];
+    (function next() {
+      var id = queue.shift(); if (!id) return;
+      idle(function () { var fr = warm(id); if (fr.loaded) next(); else fr.waiters.push(next); }, { timeout: 3000 });
+    })();
+  }
+
+  // The colour of an app's own page (its body, else its html), or '' when it can't be read.
+  function bgOf(id) {
+    var fr = frames[id];
+    if (!fr || !fr.loaded) return '';
+    try {
+      var d = fr.el.contentDocument, w = fr.el.contentWindow;
+      for (var i = 0, els = [d.body, d.documentElement]; i < els.length; i++) {
+        var c = els[i] && w.getComputedStyle(els[i]).backgroundColor;
+        if (c && c !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(c)) return c;
+      }
+    } catch (e) { /* another origin */ }
+    return '';
+  }
+  // True while this app fills the screen. `open` stays set through the closing animation, so a late
+  // load or theme change mustn't repaint the bar in the app's colours then.
+  function isShowing(id) { return open === id && !win.classList.contains('preview'); }
+  // Paint what shows past the window's edges, the browser's toolbar and the window's bar with the open app's colour.
+  function paintBehind(id) {
+    var c = id ? bgOf(id) : '';
+    if (c) root.style.setProperty('--app-bg', c); else root.style.removeProperty('--app-bg');
+    themeMeta.content = c || (id ? '#000000' : themeDefault);
+    var tone = toneOf(c);
+    if (tone) winbar.dataset.tone = tone; else delete winbar.dataset.tone;
+  }
+  // 'light' or 'dark' for an rgb()/rgba() colour, '' if it can't be read.
+  function toneOf(c) {
+    var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/.exec(c || '');
+    if (!m) return '';
+    var lin = function (v) { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+    var L = .2126 * lin(+m[1]) + .7152 * lin(+m[2]) + .0722 * lin(+m[3]);
+    return L > .4 ? 'light' : 'dark';
+  }
+  // Follow the app when it changes its own theme (a light/dark toggle, or the system's).
+  function watchBackground(id) {
+    try {
+      var w = frames[id].el.contentWindow, d = w.document;
+      var again = function () { if (isShowing(id)) requestAnimationFrame(function () { if (isShowing(id)) paintBehind(id); }); };
+      var mo = new w.MutationObserver(again);
+      [d.documentElement, d.body].forEach(function (el) { if (el) mo.observe(el, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] }); });
+      var mq = w.matchMedia('(prefers-color-scheme: dark)');
+      if (mq.addEventListener) mq.addEventListener('change', again);
+    } catch (e) { /* another origin */ }
+  }
+
+  // The size an open app gets: the screen, or on the unfolded Duo the pane beside the rail.
+  var splitMQ = matchMedia('(min-width: 600px) and (max-width: 760px) and (min-height: 700px)');
+  function view() {
+    var x = splitMQ.matches ? 72 : 0;
+    if (x) win.style.setProperty('--win-w', (innerWidth - x) + 'px'); else win.style.removeProperty('--win-w');
+    return { w: innerWidth - x, h: innerHeight, x: x };
+  }
+  // How much the window shrinks to fit its slot, and how much of its bottom a short slot cuts off.
+  function measure() {
+    var v = view();
+    slot.style.setProperty('--va', v.w + ' / ' + v.h);
+    var w = slot.clientWidth, h = slot.clientHeight, s = w / v.w;
+    return { s: s, cut: h > 0 && h < v.h * s - 1 ? v.h - h / s : 0 };
+  }
+  var put = function (card, cut) { win.style.setProperty('--card', card); win.style.setProperty('--clip', 'inset(0px 0px ' + cut + 'px 0px)'); };
+  // In its slot, as the card.
+  function placeCard() { var m = measure(); put('scale(' + m.s + ')', m.cut); }
+  // Fixed over the page, exactly where the card is: where the zoom starts from and comes back to.
+  function placeOver() { var m = measure(), r = slot.getBoundingClientRect(); put('translate(' + r.left + 'px,' + r.top + 'px) scale(' + m.s + ')', m.cut); }
+  // Filling the screen.
+  function placeOpen() { var v = view(); put(v.x ? 'translate(' + v.x + 'px,0px)' : 'none', 0); }
+  var snap = function (fn) { win.classList.add('instant'); fn(); void win.offsetWidth; win.classList.remove('instant'); };
+
+  // The name is set as wide as the one at the top of the page. One too long for its column is scaled down to fit.
+  function fitName() {
+    nameEl.style.fontSize = '';
+    var room = nameEl.clientWidth, need = nameEl.scrollWidth;
+    if (room > 0 && need > room) nameEl.style.fontSize = Math.floor(parseFloat(getComputedStyle(nameEl).fontSize) * room / need) + 'px';
+  }
+
+  function select(id, opts) {
+    if (!APPS[id] || (sel === id && !(opts && opts.force))) return;
+    sel = id;
+    var a = APPS[id];
+    order.forEach(function (x, i) {
+      var on = x === id;
+      tabs[i].setAttribute('aria-selected', on); tabs[i].tabIndex = on ? 0 : -1;
+      dots[i].setAttribute('aria-current', on); rails[i].setAttribute('aria-current', on);
+    });
+    root.style.setProperty('--tint', a.tint);
+    root.style.setProperty('--wash', a.wash);
+    $('appKind').textContent = a.kind; $('appPitch').textContent = a.pitch;
+    // the name ends in a period in the app's colour, as the name at the top of the page ends in a red one
+    var dot = document.createElement('i'); dot.textContent = '.'; dot.setAttribute('aria-hidden', 'true'); nameEl.textContent = a.name; nameEl.appendChild(dot); fitName();
+    $('appChips').innerHTML = ''; a.chips.forEach(function (c) { var s = document.createElement('span'); s.textContent = c; $('appChips').appendChild(s); });
+    $('ghost').href = a.url; // An archived app is a record of a past project, so its button says View.
+    $('startLbl').textContent = a.archived ? 'View' : 'Start'; $('start').setAttribute('aria-label', (a.archived ? 'View ' : 'Start ') + a.name); cardHit.setAttribute('aria-label', 'Open ' + a.name);
+    pitchEl.classList.remove('swap'); void pitchEl.offsetWidth; pitchEl.classList.add('swap');
+    if (!open) snap(placeCard);
+    $('winIcon').src = a.icon; $('winName').textContent = a.name; $('newTab').href = a.url;
+    $('splashIcon').src = a.icon;
+    Object.keys(frames).forEach(function (k) { frames[k].el.classList.toggle('active', k === id); });
+    splash.classList.remove('gone');
+    if (armed) arm();
+  }
+
+  $('start').addEventListener('click', function () { touched = true; launch(sel); });
+  cardHit.addEventListener('click', function () { touched = true; launch(sel); });
+
+  // The page behind an open app must not scroll (an app scrolled to its end would otherwise start
+  // scrolling the resume). Hiding the scrollbar widens the page, so pad it by the same amount.
+  function lock() { var bar = innerWidth - root.clientWidth; root.classList.add('app-open'); if (bar > 0) document.body.style.paddingRight = bar + 'px'; }
+  function unlock() { root.classList.remove('app-open'); document.body.style.paddingRight = ''; }
+
+  function launch(id, opts) {
+    opts = opts || {};
+    if (open || busy || !APPS[id]) return;
+    select(id);
+    arm();
+    open = id; busy = true;
+    var reduce = reducedMQ.matches || opts.instant;
+    // The browser must not jump the page about when Back closes the app: home() puts the card on screen itself.
+    if (!opts.fromHistory) { try { history.scrollRestoration = 'manual'; } catch (e) {} history.pushState({ app: id }, '', '#' + id); pushed = true; }
+    lock();
+    win.classList.add('instant');
+    placeOver(); // same spot on screen, now fixed over the page
+    win.classList.add('open'); win.classList.remove('preview'); win.removeAttribute('aria-hidden'); win.inert = false;
+    void win.offsetWidth;
+    if (!reduce) win.classList.remove('instant');
+    placeOpen();
+    paintBehind(id);
+    root.classList.remove('opening');
+    var fr = frames[id];
+    fr.el.tabIndex = 0; $('homeBtn').tabIndex = 0; $('newTab').tabIndex = 0; dots.forEach(function (d) { d.tabIndex = 0; });
+    setTimeout(function () {
+      win.classList.remove('instant'); busy = false;
+      var go = function () { if (open !== id) return; splash.classList.add('gone'); try { fr.el.focus(); } catch (e) {} };
+      if (fr.loaded) go(); else { fr.waiters.push(go); setTimeout(go, 2500); }
+    }, reduce ? 0 : DUR);
+  }
+
+  function home(opts) {
+    opts = opts || {};
+    if (!open) return;
+    // Leave through history when we came in through it, so Back and the button agree.
+    if (!opts.fromHistory && pushed) { history.back(); return; }
+    var id = open, reduce = reducedMQ.matches;
+    busy = true;
+    frames[id].el.tabIndex = -1; $('homeBtn').tabIndex = -1; $('newTab').tabIndex = -1; dots.forEach(function (d) { d.tabIndex = -1; });
+    win.classList.add('preview'); win.setAttribute('aria-hidden', 'true'); win.inert = true;
+    paintBehind(null);
+    fitName();
+    // The card may be mostly off screen (the app came from a link, or the window was resized):
+    // bring it into view behind the window before flying back to it.
+    var r = slot.getBoundingClientRect(), seen = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+    if (seen < r.height * .4) slot.scrollIntoView({ block: 'center', behavior: 'instant' });
+    if (reduce) win.classList.add('instant');
+    placeOver();
+    setTimeout(function () {
+      win.classList.remove('open'); snap(placeCard);
+      unlock();
+      open = null; busy = false; pushed = false;
+      try { history.scrollRestoration = 'auto'; } catch (e) {}
+      tabs[order.indexOf(id)].focus({ preventScroll: true });
+    }, reduce ? 0 : DUR);
+  }
+  $('homeBtn').addEventListener('click', function () { home(); });
+
+  // Swap the open app for another one without closing: the new one slides in from the side it was
+  // swiped from. The URL follows (#id) without adding a history entry, so Back still means "the resume".
+  function switchTo(id, dir) {
+    if (!open || busy || id === open || !APPS[id]) return;
+    var prev = frames[open];
+    if (!dir) dir = order.indexOf(id) > order.indexOf(open) ? 1 : -1;
+    busy = true;
+    prev.el.tabIndex = -1;
+    touched = true;
+    select(id, { force: true });
+    open = id;
+    paintBehind(id);
+    history.replaceState({ app: id }, '', '#' + id);
+    var fr = frames[id];
+    fr.el.tabIndex = 0;
+    if (!reducedMQ.matches && fr.el.animate) {
+      var opts = { duration: 380, easing: 'cubic-bezier(.32,.72,0,1)' };
+      fr.el.animate([{ transform: 'translateX(' + dir * 28 + '%)', opacity: 0 }, { transform: 'none', opacity: 1 }], opts);
+      prev.el.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(' + -dir * 28 + '%)', opacity: 0 }], opts);
+      splash.animate([{ transform: 'translateX(' + dir * 28 + '%)' }, { transform: 'none' }], opts);
+    }
+    setTimeout(function () {
+      busy = false;
+      var go = function () { if (open === id) { splash.classList.add('gone'); try { fr.el.focus(); } catch (e) {} } };
+      if (fr.loaded) go(); else fr.waiters.push(go);
+    }, reducedMQ.matches ? 0 : 380);
+  }
+  function step(dir) {
+    var cur = open || sel, n = order.length;
+    if (n < 2) return;
+    var next = order[(order.indexOf(cur) + dir + n) % n];
+    touched = true;
+    if (open) switchTo(next, dir); else select(next);
+  }
+
+  // Swipe sideways for the next or previous app: across the card and its text, or with an app
+  // open across its top bar (the app itself keeps its own drags, like spinning a globe).
+  var touch = null, swipedAt = 0;
+  addEventListener('touchstart', function (e) {
+    var t = e.target;
+    if (busy || e.touches.length !== 1 || !t.closest || !t.closest(open ? '.winbar' : '.stage')) { touch = null; return; }
+    touch = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+  }, { passive: true });
+  addEventListener('touchend', function (e) {
+    if (!touch) return;
+    var dx = e.changedTouches[0].clientX - touch.x, dy = e.changedTouches[0].clientY - touch.y, quick = Date.now() - touch.t < 800;
+    touch = null;
+    if (quick && Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) { swipedAt = Date.now(); step(dx < 0 ? 1 : -1); }
+  }, { passive: true });
+  addEventListener('touchcancel', function () { touch = null; }, { passive: true });
+  // a swipe that ends on a button shouldn't also press it
+  document.addEventListener('click', function (e) { if (Date.now() - swipedAt < 450) { e.preventDefault(); e.stopPropagation(); } }, true);
+  // two-finger sideways scroll on a trackpad does the same over the card and its text
+  var wheelSum = 0, wheelQuiet = 0;
+  stage.addEventListener('wheel', function (e) {
+    if (open || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    var now = Date.now();
+    if (now < wheelQuiet) return;
+    wheelSum += e.deltaX;
+    if (Math.abs(wheelSum) > 80) { step(wheelSum > 0 ? 1 : -1); wheelSum = 0; wheelQuiet = now + 500; }
+  }, { passive: true });
+
+  addEventListener('popstate', function (e) {
+    var want = e.state && e.state.app;
+    if (open && !want) home({ fromHistory: true });
+    else if (!open && want) { pushed = true; launch(want, { fromHistory: true }); }
+  });
+  addEventListener('hashchange', function () { var id = location.hash.slice(1); if (!open && APPS[id]) { history.replaceState(null, '', location.pathname + location.search); launch(id); } });
+  addEventListener('resize', function () {
+    fitName(); // also while an app is open: the section behind it keeps its layout, and it is what closing returns to
+    if (!busy) snap(open ? placeOpen : placeCard);
+  });
+  addEventListener('keydown', function (e) { if (open && e.key === 'Escape') home(); });
+  // An app loading in the card can focus one of its own fields. Until it's opened, it doesn't get to keep the focus.
+  addEventListener('blur', function () {
+    setTimeout(function () { var f = document.activeElement; if (!open && f && f.tagName === 'IFRAME' && framesEl.contains(f)) f.blur(); });
+  });
+
+  var start = location.hash.slice(1);
+  select(APPS[start] ? start : order[0], { force: true });
+  if ('ResizeObserver' in window) new ResizeObserver(function () { if (!open && !busy) snap(placeCard); }).observe(slot);
+  // fonts can shift the layout once they arrive
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { fitName(); if (!open) snap(placeCard); });
+  // A link straight to an app (bollineni.co/#gridline) opens it, with the resume one Back away.
+  if (APPS[start]) { history.replaceState(null, '', location.pathname + location.search); launch(start, { instant: true }); }
+  else if ('IntersectionObserver' in window) {
+    var near = new IntersectionObserver(function (entries) { if (entries.some(function (x) { return x.isIntersecting; })) { near.disconnect(); if (!armed) arm(); } }, { rootMargin: '700px 0px' });
+    near.observe($('launcher'));
+  } else arm();
 })();
 </script>
 </body>
