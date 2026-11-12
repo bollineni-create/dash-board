@@ -84,7 +84,6 @@ h1 i { font-style: normal; color: var(--red); }
   text-decoration: none; background: var(--paper); color: var(--ink); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .btn.solid { background: var(--ink); color: var(--paper); }
 .btn:hover { background: var(--red); border-color: var(--red); color: var(--paper); }
-#pdf { display: none; } .js #pdf { display: inline-flex; }
 
 /* Record: four tombstones, joined like a deal announcement */
 #record { margin-top: 64px; container-type: inline-size; }
@@ -176,7 +175,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .bar nav a { padding: 13px 0; }
   .hero { padding-top: 28px; }
   .intro { margin-top: 28px; gap: 14px; }
-  .btn { padding: 0 16px; } .js #pdf { display: none; }
+  .btn { padding: 0 16px; }
   #record { margin-top: 44px; }
   /* On a phone the tombstones stack into a ledger: what it is on the left, the figure on the right. */
   .tombs { grid-template-columns: minmax(0, 1fr); }
@@ -195,7 +194,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   html { scroll-behavior: auto; }
   h1 .ln > span { animation: none; } .btn, .app { transition: none; }
 }
-/* Save as PDF: compact, ink-only */
+/* Printing (Cmd/Ctrl+P): compact, ink-only */
 @media print {
   @page { margin: 13mm; }
   body { font-size: 9.5pt; line-height: 1.38; }
@@ -254,7 +253,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
         <a class="btn solid" href="mailto:naren.bollineni@icloud.com">Email me</a>
         <a class="btn" href="https://www.linkedin.com/in/narenbollineni/" rel="noopener">LinkedIn</a>
         <a class="btn" href="https://github.com/bollineni-create" rel="noopener">GitHub</a>
-        <button class="btn" id="pdf" type="button">Save as PDF</button>
       </div>
     </div>
   </div>
@@ -396,8 +394,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 
 <script>
 (function () {
-  document.documentElement.classList.add('js');
-  document.getElementById('pdf').addEventListener('click', function () { window.print(); });
 
   // The bar underlines the section on screen.
   var links = {}, current = null;
