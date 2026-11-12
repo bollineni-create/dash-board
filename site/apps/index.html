@@ -68,6 +68,8 @@ button { font: inherit; color: inherit; }
   padding: calc(22px + env(safe-area-inset-top, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-right, 0px)) 0 max(clamp(20px, 5vw, 72px), env(safe-area-inset-left, 0px));
   font-family: var(--mono); font-size: 13px; color: var(--muted); letter-spacing: .04em; }
 .status .right { flex: none; display: flex; gap: 14px; align-items: center; }
+/* The way back to the resume (the site's front page) sits beside the clock. */
+.status .resume { flex: none; margin-left: auto; }
 .batt { width: 26px; height: 12px; border: 1.5px solid var(--muted); border-radius: 3px; position: relative; }
 .batt::before { content: ""; position: absolute; inset: 1.5px; right: 5px; background: var(--muted); border-radius: 1px; }
 .batt::after { content: ""; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: var(--muted); border-radius: 0 1px 1px 0; }
@@ -122,7 +124,7 @@ button { font: inherit; color: inherit; }
   .hero h1 { font-size: clamp(32px, 9vw, 46px) !important; } .kind { font-size: 11px; }
   .hero p { font-size: 14.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .actions { margin-top: 2px; } .start { padding: 12px 24px; font-size: 16px; } }
-@media (max-width: 760px) { .home { gap: 16px; } .status { padding-top: calc(14px + env(safe-area-inset-top, 0px)); gap: 12px; } .shelf { height: 56px; gap: 10px; padding-right: 8px; margin-right: 0; } .status .batt { display: none; } .hero { gap: 8px; } .chips { display: none; } .icon { width: 38px; } .app.sel .icon { width: 52px; } .app .lbl { display: none; } .status #clock .d { display: none; } }
+@media (max-width: 760px) { .home { gap: 16px; } .status { padding-top: calc(14px + env(safe-area-inset-top, 0px)); gap: 12px; } .shelf { height: 56px; gap: 10px; padding-right: 8px; margin-right: 0; } .status .batt { display: none; } .status .right { display: none; } .hero { gap: 8px; } .chips { display: none; } .icon { width: 38px; } .app.sel .icon { width: 52px; } .app .lbl { display: none; } .status #clock .d { display: none; } }
 .card-hit { position: fixed; z-index: 7; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 20px; }
 .card-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; }
 .reflect { position: fixed; z-index: 1; pointer-events: none; border-radius: 50%; filter: blur(40px); opacity: .55;
@@ -140,7 +142,8 @@ button { font: inherit; color: inherit; }
     background: color-mix(in srgb, var(--night) 62%, transparent); border-right: 1px solid var(--line); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
   }
   header.status { transition: width .55s var(--ease), padding .55s var(--ease), transform .55s var(--ease), opacity .4s ease; }
-  .status .right { order: -1; justify-content: space-between; padding: 0 8px; white-space: nowrap; overflow: hidden; }
+  .status .right { display: flex; order: -1; justify-content: space-between; padding: 0 8px; white-space: nowrap; overflow: hidden; }
+  .status .resume { margin: 0 8px; justify-content: center; } body.app-open .status .resume { display: none; }
   .status #clock .d { display: inline; } .status .batt { display: block; flex: none; }
   .shelf { flex: 1 1 auto; flex-direction: column; align-items: stretch; height: auto; gap: 4px; overflow: hidden auto; overscroll-behavior: contain; padding: 0; margin: 0; }
   .app { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 16px; text-align: left; transition: background .3s, padding .55s var(--ease); }
@@ -262,6 +265,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
 
 <header class="status">
   <nav class="shelf" id="shelf" aria-label="Apps"></nav>
+  <a class="pill resume" href="/" title="Back to Naren's resume">← Resume</a>
   <span class="right"><span id="clock">--:--</span><span class="batt" aria-hidden="true"></span></span>
 </header>
 

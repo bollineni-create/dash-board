@@ -26,11 +26,13 @@
   // Old links to an app (bollineni.co/#gridline) now live under /apps, and home-screen
   // installs made before the move (iOS keeps the URL saved at install, "/") still open the
   // launcher: a page running standalone is an installed app, never a LinkedIn visitor.
+  // The one exception is someone who tapped "← Resume" in the launcher: they asked for this page.
   (function () {
     var ids = /*APP_IDS*/[]; var h = location.hash.slice(1);
     if (h && ids.indexOf(h) > -1) { location.replace('/apps#' + h); return; }
     var standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-    if (standalone) location.replace('/apps');
+    var fromLauncher = document.referrer.indexOf(location.origin + '/apps') === 0;
+    if (standalone && !fromLauncher) location.replace('/apps');
   })();
 </script>
 <link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
