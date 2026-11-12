@@ -7,7 +7,7 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, ex
 import { extname } from 'node:path';
 
 const OUT = 'public', SRC = '.src';
-const RESERVED = new Set(['api', 'icons', 'legal', 'apps']);
+const RESERVED = new Set(['api', 'icons', 'legal', 'apps', 'fonts']);
 const apps = JSON.parse(readFileSync('apps.json', 'utf8'));
 const lock = existsSync('apps.lock.json') ? JSON.parse(readFileSync('apps.lock.json', 'utf8')) : {};
 
@@ -120,9 +120,19 @@ writeFileSync(pagePath, page
 
 // Old links like bollineni.co/#gridline still open the app: the resume page forwards
 // any app hash to /apps#<id>, so it needs the list of app ids.
+// The resume also shows every app as a tile in its Apps section, in the app's own colours,
+// so a new entry in apps.json appears there too. Each tile opens the app in the launcher.
+const hex = (c, field, id) => { if (!/^#[0-9a-f]{3,8}$/i.test(c)) throw new Error(`apps.json: "${id}" has a "${field}" that is not a hex colour.`); return c; };
+const tiles = shelf.map((a) => `<a class="app" href="/apps#${a.id}" style="--tint:${hex(a.tint, 'tint', a.id)};--wash:${hex(a.wash, 'wash', a.id)}">`
+  + `<span class="app-icon"><img src="${esc(a.icon)}" alt="" width="60" height="60" loading="lazy"${a.iconStyle ? ` style="${esc(a.iconStyle)}"` : ''}></span>`
+  + `<span class="app-name">${esc(a.name)}${a.archived && !/archived/i.test(a.kind) ? '<em>Archived</em>' : ''}</span>`
+  + `<span class="app-kind">${esc(a.kind)}</span>`
+  + `<span class="app-pitch">${esc(a.pitch)}</span></a>`).join('\n        ');
 const homePath = `${OUT}/index.html`;
 const home = readFileSync(homePath, 'utf8');
-if (!home.includes('/*APP_IDS*/[]')) throw new Error('site/index.html: no /*APP_IDS*/[] placeholder.');
-writeFileSync(homePath, home.replace('/*APP_IDS*/[]', JSON.stringify(shelf.map((a) => a.id))));
+for (const mark of ['/*APP_IDS*/[]', '<!--APP_TILES-->']) if (!home.includes(mark)) throw new Error(`site/index.html: no ${mark} placeholder.`);
+writeFileSync(homePath, home
+  .replace('/*APP_IDS*/[]', JSON.stringify(shelf.map((a) => a.id)))
+  .replace('<!--APP_TILES-->', () => tiles));
 
 console.log(`Built ${shelf.length} apps: ${shelf.map((a) => a.id).join(', ')}`);
