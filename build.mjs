@@ -107,7 +107,7 @@ for (const a of apps) {
       .replace('</head>', `${appHead}\n</head>`));
   }
   shelf.push({ id: a.id, name: a.name, icon: `/${icon}`, iconStyle: a.iconStyle || '', url: `/${a.id}/`, kind: a.kind,
-    pitch: a.pitch, chips: a.chips || [], tint: a.tint, wash: a.wash, ownsEsc: !!a.ownsEsc });
+    pitch: a.pitch, chips: a.chips || [], tint: a.tint, wash: a.wash, ownsEsc: !!a.ownsEsc, archived: !!a.archived });
 }
 
 // The launcher lives at /apps; the site's front page (site/index.html) is Naren's resume.

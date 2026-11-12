@@ -18,7 +18,7 @@
 <meta property="og:site_name" content="bollineni.co">
 <meta property="og:url" content="https://bollineni.co/apps">
 <meta property="og:title" content="bollineni.co">
-<meta property="og:description" content="Five apps. Tap one and go.">
+<meta property="og:description" content="Apps that run right in your browser. Tap one and go.">
 <meta property="og:image" content="https://bollineni.co/og.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
@@ -26,7 +26,7 @@
 <meta property="og:image:alt" content="bollineni.co: Gridline, Palimpsest, Ballast, Rounds and Loom">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="bollineni.co">
-<meta name="twitter:description" content="Five apps. Tap one and go.">
+<meta name="twitter:description" content="Apps that run right in your browser. Tap one and go.">
 <meta name="twitter:image" content="https://bollineni.co/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -272,7 +272,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     <p id="pitch"></p>
     <div class="chips" id="chips"></div>
     <div class="actions">
-      <button class="start" id="start" type="button"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg>Start</button>
+      <button class="start" id="start" type="button"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg><span id="startLbl">Start</span></button>
       <a class="ghost" id="ghost" target="_blank" rel="noopener">Open in a new tab</a>
     </div>
   </section>
@@ -435,7 +435,8 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     root.style.setProperty('--wash', a.wash);
     $('kind').textContent = a.kind; $('title').textContent = a.name; $('pitch').textContent = a.pitch;
     $('chips').innerHTML = ''; a.chips.forEach(function (c) { var s = document.createElement('span'); s.textContent = c; $('chips').appendChild(s); });
-    $('ghost').href = a.url; $('start').setAttribute('aria-label', 'Start ' + a.name); cardHit.setAttribute('aria-label', 'Open ' + a.name);
+    $('ghost').href = a.url; // An archived app is a record of a past project, so its button says View.
+    $('startLbl').textContent = a.archived ? 'View' : 'Start'; $('start').setAttribute('aria-label', (a.archived ? 'View ' : 'Start ') + a.name); cardHit.setAttribute('aria-label', 'Open ' + a.name);
     heroEl.classList.remove('swap'); void heroEl.offsetWidth; heroEl.classList.add('swap');
     // the new pitch can change the hero's height, which moves the slot in the split view
     if (!open) placeCard();

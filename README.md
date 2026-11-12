@@ -66,6 +66,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 | `installIcon` | A PNG, 512px or larger, used when someone installs the app to their home screen (Share → Add to Home Screen, or Install app in Chrome). Defaults to `icon`, which then has to be a PNG. |
 | `iconStyle` | Extra CSS for the icon, to nudge one that is off-centre. |
 | `ownsEsc` | `true` if the app uses Esc itself. The launcher then leaves Esc to the app. |
+| `archived` | `true` for a past project kept as a record (PDT App). Its button says View instead of Start. |
 
 ### Which apps fit
 
