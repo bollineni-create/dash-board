@@ -580,7 +580,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     if (open) { if (e.key === 'Escape') home(); return; }
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { step(1); buttons[order.indexOf(sel)].focus({ preventScroll: true }); e.preventDefault(); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { step(-1); buttons[order.indexOf(sel)].focus({ preventScroll: true }); e.preventDefault(); }
-    else if (e.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('.actions, .app, .card-hit'))) { launch(sel); e.preventDefault(); }
+    else if (e.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('.actions, .app, .card-hit, .resume'))) { launch(sel); e.preventDefault(); }
   });
 
   // An app loading behind the home screen can focus one of its own fields, which would

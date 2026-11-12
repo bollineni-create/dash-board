@@ -48,7 +48,7 @@
   --sans: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --side: max(32px, env(safe-area-inset-left), env(safe-area-inset-right)); --bar: 57px; }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: calc(var(--bar) + 20px); }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: calc(var(--bar) + env(safe-area-inset-top) + 20px); }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 var(--sans); -webkit-font-smoothing: antialiased; overflow-wrap: anywhere; }
 a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { color: var(--red); }
