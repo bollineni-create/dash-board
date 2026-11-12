@@ -92,6 +92,7 @@ li b { color: var(--ink); }
 dl { margin: 22px 0 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px 24px; }
 dt { grid-column: span 3; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; padding-top: 3px; }
 dd { grid-column: span 9; margin: 0; color: var(--soft); }
+.print-only { display: none; }
 footer { margin-top: 72px; border-top: 2px solid var(--ink); padding-top: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; }
 
 /* Tablet and the unfolded iPhone Duo */
@@ -118,6 +119,7 @@ footer { margin-top: 72px; border-top: 2px solid var(--ink); padding-top: 16px; 
   body { font-size: 10pt; line-height: 1.4; }
   .page { padding: 0; max-width: none; }
   .top nav, .actions, .noprint, footer { display: none !important; }
+  .print-only { display: block; grid-column: 1 / -1; margin: 4px 0 0; font-size: 10pt; }
   h1 { font-size: 30pt; margin: 10px 0 8px; }
   .lede { font-size: 12pt; }
   section { margin-top: 14px; break-inside: auto; }
@@ -149,6 +151,7 @@ footer { margin-top: 72px; border-top: 2px solid var(--ink); padding-top: 16px; 
   <div class="grid">
     <p class="role">Corporate Banker<br>J.P. Morgan · Seattle<br>Economics, USF Honors</p>
     <p class="lede">I help commercial real estate clients move and grow their money. Economist by training, researcher by habit, builder on the side.</p>
+    <p class="print-only">naren.bollineni@icloud.com · linkedin.com/in/narenbollineni · github.com/bollineni-create · bollineni.co</p>
     <div class="actions">
       <a class="btn solid" href="mailto:naren.bollineni@icloud.com">Email me</a>
       <a class="btn" href="https://www.linkedin.com/in/narenbollineni/" rel="noopener">LinkedIn</a>
