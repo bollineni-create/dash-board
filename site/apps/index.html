@@ -579,8 +579,9 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
   });
   addEventListener('hashchange', function () { var id = location.hash.slice(1); if (!open && APPS[id]) { history.replaceState(null, '', location.pathname); launch(id); } });
   addEventListener('resize', function () {
+    fitTitle(); // also while an app is open: the home screen behind it keeps its layout, and it is what Esc returns to
     if (open) { win.classList.add('instant'); placeOpen(); requestAnimationFrame(function () { win.classList.remove('instant'); }); return; }
-    win.classList.add('instant'); fitTitle(); placeCard(); requestAnimationFrame(function () { win.classList.remove('instant'); });
+    win.classList.add('instant'); placeCard(); requestAnimationFrame(function () { win.classList.remove('instant'); });
   });
 
   addEventListener('keydown', function (e) {
