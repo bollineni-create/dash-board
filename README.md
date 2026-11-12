@@ -1,6 +1,6 @@
 # bollineni-create launcher
 
-bollineni.co's front page is Naren's resume (`site/index.html`), shared from LinkedIn only and kept out of search engines (noindex meta tag plus an `X-Robots-Tag` header in `vercel.json`). The console-style app launcher lives at https://bollineni.co/apps (`site/apps/index.html`); old links like `bollineni.co/#gridline` forward to `/apps#gridline`.
+bollineni.co's front page is Naren's resume (`site/index.html`), shared from LinkedIn only and kept out of search engines (noindex meta tag plus an `X-Robots-Tag` header in `vercel.json`). The app launcher lives at https://bollineni.co/apps (`site/apps/index.html`) and wears the same look as the resume: black ground, white Archivo, square corners, and the selected app's colour as the only colour on the page; old links like `bollineni.co/#gridline` forward to `/apps#gridline`.
 
 - `apps.json`: the list of apps on the shelf.
 - `site/index.html`: the resume (front page). Its Apps section shows a tile for every app in `apps.json`, in the app's own colours; the build writes the tiles in.
@@ -16,6 +16,7 @@ bollineni.co's front page is Naren's resume (`site/index.html`), shared from Lin
 - **Start an app:** Start or Enter. Each app gets its own address (`/#gridline`), so you can link straight to an app.
 - **Switch apps while one is open:** swipe the top bar, tap a dot, or use ← →.
 - **Go back:** ← Launcher, Esc, or the browser's Back button.
+- **Back to the resume:** the wordmark or Resume in the launcher's top bar.
 - **Preloading:** the selected app and the apps next to it load in the background, unless the phone is on Data Saver or a slow connection.
 
 ## Keeping apps up to date

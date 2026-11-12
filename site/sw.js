@@ -2,7 +2,7 @@
 // the server, so a deploy shows up immediately and apps keep their own data handling.
 // The only thing cached is the offline page, shown when an installed app opens with no
 // connection. It never touches API calls, scripts, styles or images.
-const CACHE = 'bollineni-offline-v1';
+const CACHE = 'bollineni-offline-v2';
 const OFFLINE_URL = '/offline'; // cleanUrls serves offline.html here without a redirect
 
 self.addEventListener('install', (event) => {

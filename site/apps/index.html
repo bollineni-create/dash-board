@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>bollineni.co</title>
 <meta name="description" content="{{APP_NAMES}}: apps that run right in your browser. Tap one and go.">
-<meta name="theme-color" content="#070A14">
+<meta name="theme-color" content="#000000">
 <link rel="canonical" href="https://bollineni.co/apps">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
@@ -28,221 +28,224 @@
 <meta name="twitter:title" content="bollineni.co">
 <meta name="twitter:description" content="Apps that run right in your browser. Tap one and go.">
 <meta name="twitter:image" content="https://bollineni.co/og.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* A console home screen. The selected app sets the whole scene: its colour washes the
-   background, its name and pitch fill the left, and on the right sits the app itself,
-   already loaded and running, as a live card. Start zooms that card to full screen. */
+/* The launcher, in the same Swiss look as the resume it sits behind: black ground, white Archivo,
+   square corners, hairline rules. The only colour on the page belongs to the selected app: its
+   icon, the mark under it in the bar, the period after its name, and the frame around its card.
+   The card on the right is the app itself, already loaded and running; Start zooms it to full screen. */
+@font-face { font-family: "Archivo"; src: url("/fonts/archivo.woff2") format("woff2");
+  font-weight: 100 900; font-stretch: 62% 125%; font-style: normal; font-display: swap; }
 :root {
-  --night: #070A14;
-  --deep: #111628;
-  --ink: #F1F4FF;
-  --muted: #A2ACC8;
-  --chip: rgb(255 255 255 / .07);
-  --line: rgb(255 255 255 / .13);
-  --tint: #7FA7FF;          /* the selected app's accent */
-  --wash: #101a3a;          /* the selected app's background wash */
-  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --night: #000;
+  --ink: #fff;
+  --body: #DADADA;
+  --muted: #A8A8A8;
+  --line: #303030;
+  --red: #D62E1F;
+  --tint: #fff;             /* the selected app's accent */
+  --wash: #1a1a1a;          /* the selected app's background wash (shown while it loads) */
+  --sans: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --ease: cubic-bezier(.32,.72,0,1);
+  --bar: 64px;
+  --side: max(clamp(20px, 5vw, 72px), env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
-body { background: var(--night); color: var(--ink); font-family: var(--display); overflow: hidden; -webkit-font-smoothing: antialiased; }
+body { background: var(--night); color: var(--ink); font: 400 16px/1.5 var(--sans); overflow: hidden; -webkit-font-smoothing: antialiased; }
 button { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--tint); outline-offset: 4px; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 
-#waves { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-.ambient { position: fixed; inset: 0; pointer-events: none; transition: background 1s ease;
-  background: radial-gradient(70% 70% at var(--mx, 70%) var(--my, 40%), color-mix(in srgb, var(--wash) 90%, transparent), transparent 70%),
-              radial-gradient(120% 90% at 50% 120%, color-mix(in srgb, var(--tint) 16%, transparent), transparent 60%); }
-.grain { position: fixed; inset: 0; pointer-events: none; opacity: .06; mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+/* The top bar is the resume's bar, inverted: the wordmark on the left, then the apps where the
+   resume has its sections, with the selected one marked on the rule the way the resume marks
+   the section you're in. */
+.status { position: fixed; top: 0; left: 0; right: 0; z-index: 3; display: flex; align-items: stretch; gap: 28px;
+  height: calc(var(--bar) + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) var(--side) 0;
+  background: var(--night); border-bottom: 2px solid var(--ink); font-size: 14.5px; }
+.brand { align-self: center; font-weight: 800; font-stretch: 112%; letter-spacing: -.02em; text-decoration: none; white-space: nowrap; }
+.status .resume { align-self: center; margin-left: auto; font-weight: 500; text-decoration: none; white-space: nowrap; padding: 12px 0; }
+.brand:hover, .status .resume:hover { color: var(--red); }
+.clock { align-self: center; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* The status bar holds the app icons on the left and the clock on the right, both on one
-   centre line, with the same side margins as the page below. */
-.status { position: fixed; top: 0; left: 0; right: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; gap: 24px;
-  padding: calc(22px + env(safe-area-inset-top, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-right, 0px)) 0 max(clamp(20px, 5vw, 72px), env(safe-area-inset-left, 0px));
-  font-family: var(--mono); font-size: 13px; color: var(--muted); letter-spacing: .04em; }
-.status .right { flex: none; display: flex; gap: 14px; align-items: center; }
-/* The way back to the resume (the site's front page) sits beside the clock. */
-.status .resume { flex: none; margin-left: auto; }
-.batt { width: 26px; height: 12px; border: 1.5px solid var(--muted); border-radius: 3px; position: relative; }
-.batt::before { content: ""; position: absolute; inset: 1.5px; right: 5px; background: var(--muted); border-radius: 1px; }
-.batt::after { content: ""; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: var(--muted); border-radius: 0 1px 1px 0; }
-
-/* layout: the icon shelf on top, the pitch on the left, the live card on the right */
-.home { position: fixed; inset: 0; z-index: 2; display: grid; gap: clamp(20px, 4vh, 44px);
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); grid-template-rows: minmax(0, 1fr);
-  grid-template-areas: "hero slot"; align-items: center;
-  padding: calc(136px + env(safe-area-inset-top, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(clamp(20px, 5vw, 72px), env(safe-area-inset-left, 0px)); }
-@media (max-width: 760px) {
-  .home { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; grid-template-areas: "slot" "hero"; padding-top: calc(96px + env(safe-area-inset-top, 0px)); align-content: start; gap: 22px; overflow-y: auto; }
-}
-.shelf { flex: 0 1 auto; display: flex; gap: 18px; align-items: center; height: 76px; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
-  padding: 40px 16px; margin: -40px -16px; box-sizing: content-box; }
+.shelf { flex: 0 1 auto; display: flex; align-items: stretch; gap: 2px; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  margin-bottom: -2px; padding-bottom: 2px; }
 .shelf::-webkit-scrollbar { display: none; }
-.app { flex: none; position: relative; background: none; border: 0; padding: 0; cursor: pointer; display: grid; justify-items: center; }
-.icon { width: 56px; aspect-ratio: 1; border-radius: 24%; overflow: hidden; position: relative; opacity: .62;
-  box-shadow: 0 10px 24px rgb(0 0 0 / .45), 0 0 0 1px rgb(255 255 255 / .08);
-  transition: width .45s var(--ease), opacity .3s, box-shadow .45s; }
+.app { flex: none; position: relative; width: 54px; background: none; border: 0; padding: 0; cursor: pointer; display: grid; place-items: center; }
+.app::after { content: ""; position: absolute; left: 7px; right: 7px; bottom: -2px; height: 4px; background: var(--tint); transform: scaleX(0); transition: transform .3s var(--ease), background .4s; }
+.app.sel::after { transform: none; }
+.icon { width: 40px; aspect-ratio: 1; border-radius: 24%; overflow: hidden; position: relative; opacity: .6; filter: grayscale(1);
+  transition: opacity .25s, filter .25s; }
 .icon img { width: 100%; height: 100%; display: block; }
-.app .lbl { position: absolute; top: calc(100% + 8px); left: 50%; translate: -50% 0; white-space: nowrap; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); opacity: 0; transform: translateY(-4px); transition: opacity .3s, transform .3s; }
+.app .lbl { display: none; }
 .app:hover .icon { opacity: .9; }
-.app.sel .icon { width: 76px; opacity: 1; box-shadow: 0 18px 40px rgb(0 0 0 / .5), 0 0 0 3px var(--tint), 0 0 36px color-mix(in srgb, var(--tint) 55%, transparent); }
-.app.sel .lbl { opacity: 1; transform: none; color: var(--ink); }
+.app.sel .icon { opacity: 1; filter: none; }
 .app:focus-visible { outline: none; }
 .app:focus-visible .icon { outline: 2px solid var(--ink); outline-offset: 3px; }
 
-.hero { grid-area: hero; display: grid; gap: 18px; align-content: center; min-width: 0; max-width: 560px; }
-.kind { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--tint); transition: color .6s; }
-.hero h1 { margin: 0; font-weight: 800; font-size: clamp(44px, 7.4vw, 112px); line-height: .92; letter-spacing: -.035em; text-wrap: balance; }
-.hero p { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: clamp(15px, 1.3vw, 18px); line-height: 1.5; color: var(--muted); max-width: 46ch; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chips span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; padding: 5px 10px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); color: var(--ink); }
-.actions { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: center; margin-top: 6px; }
-.start { border: 0; border-radius: 999px; padding: 14px 28px; font-weight: 800; font-size: 17px; cursor: pointer; background: var(--ink); color: var(--night);
-  display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px color-mix(in srgb, var(--tint) 35%, transparent); transition: transform .2s, box-shadow .3s; }
-.start:hover { transform: translateY(-1px) scale(1.02); }
-.start svg { width: 14px; height: 14px; }
-.ghost { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 2px; }
+/* layout: the name and pitch on the left, the live card on the right. The text is as tall as
+   the card: the name hangs from its top edge, the pitch and Start sit on its bottom edge. */
+.home { position: fixed; inset: 0; z-index: 2; display: grid; column-gap: clamp(24px, 4vw, 64px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); grid-template-rows: auto;
+  grid-template-areas: "hero slot"; align-content: center;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--bar) + clamp(28px, 5vh, 56px)) var(--side) calc(76px + env(safe-area-inset-bottom, 0px)); }
+.hero { grid-area: hero; align-self: stretch; display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 680px; }
+.hero h1 { margin: -.125em 0 0 -.06em; font-weight: 900; font-stretch: 125%; font-size: clamp(40px, 5.6vw, 104px); line-height: .9; letter-spacing: -.055em; white-space: nowrap; }
+.hero h1 i { font-style: normal; color: var(--tint); transition: color .4s; }
+.kind { font-size: 15px; font-weight: 500; color: var(--tint); transition: color .4s; }
+.hero p { margin: auto 0 0; font-size: clamp(15.5px, 1.25vw, 18px); line-height: 1.5; color: var(--body); max-width: 44ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips span { font-size: 12.5px; font-weight: 500; line-height: 1.4; padding: 3px 8px; border: 1px solid var(--line); color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; margin-top: 8px; }
+.start { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 26px; border: 2px solid var(--ink); border-radius: 0; background: var(--ink); color: var(--night);
+  font: 800 16px/1 var(--sans); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.start:hover { background: var(--red); border-color: var(--red); color: var(--ink); }
+.start svg { width: 13px; height: 13px; }
+.ghost { font-size: 14.5px; font-weight: 500; color: var(--muted); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .ghost:hover { color: var(--ink); }
 /* swap animation for the pitch when the selection changes */
-.hero.swap > * { animation: rise .5s var(--ease) both; }
+.hero.swap > * { animation: rise .45s var(--ease) both; }
 .hero.swap > :nth-child(2) { animation-delay: .03s; } .hero.swap > :nth-child(3) { animation-delay: .06s; } .hero.swap > :nth-child(4) { animation-delay: .09s; } .hero.swap > :nth-child(5) { animation-delay: .12s; }
-@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-.slot { grid-area: slot; justify-self: end; align-self: center; width: min(100%, calc((100vh - 220px) * var(--var, 1.6))); aspect-ratio: var(--va, 16 / 10); }
+.slot { grid-area: slot; justify-self: end; align-self: center; width: min(100%, calc((100vh - var(--bar) - 136px) * var(--var, 1.6))); aspect-ratio: var(--va, 16 / 10); }
+/* The frame around the card, in the selected app's colour. It is also the button that opens it. */
+.card-hit { position: fixed; z-index: 7; border: 2px solid var(--tint); border-radius: 0; padding: 0; background: transparent; cursor: pointer; transition: border-color .4s; }
+.card-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+
+.hint { position: fixed; left: var(--side); right: var(--side); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 3; display: flex; flex-wrap: wrap; gap: 4px 26px;
+  padding-top: 13px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.hint kbd { font: inherit; color: var(--body); border: 1px solid var(--line); padding: 1px 6px; margin-right: 4px; }
+.hint kbd + kbd { margin-left: -1px; }
+
 /* Phone-width screens (folded iPhone Duo, with or without Safari's side rail; regular phones): the
    card fills the full width and the space left by the text, showing the top of the app close to its
    real size (placeCard clips the scaled window to the card), instead of a small whole-screen thumbnail. */
-@media (max-width: 760px) { .home { grid-template-rows: minmax(160px, 1fr) auto; align-content: stretch; overflow: hidden; padding-bottom: max(18px, env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 760px) {
+  :root { --bar: 52px; }
+  .status { gap: 12px; font-size: 13.5px; }
+  .brand, .clock { display: none; }
+  .app { width: 44px; } .app::after { left: 5px; right: 5px; } .icon { width: 34px; }
+  .home { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(160px, 1fr) auto; grid-template-areas: "slot" "hero"; align-content: stretch; gap: 16px; overflow: hidden;
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--bar) + 16px); padding-bottom: max(18px, env(safe-area-inset-bottom, 0px)); }
   .slot { justify-self: stretch; align-self: stretch; width: 100%; height: 100%; min-width: 0; aspect-ratio: auto; }
-  .hero h1 { font-size: clamp(32px, 9vw, 46px) !important; } .kind { font-size: 11px; }
-  .hero p { font-size: 14.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .actions { margin-top: 2px; } .start { padding: 12px 24px; font-size: 16px; } }
-@media (max-width: 760px) { .home { gap: 16px; } .status { padding-top: calc(14px + env(safe-area-inset-top, 0px)); gap: 12px; } .shelf { height: 56px; gap: 10px; padding-right: 8px; margin-right: 0; } .status .batt { display: none; } .status .right { display: none; } .hero { gap: 8px; } .chips { display: none; } .icon { width: 38px; } .app.sel .icon { width: 52px; } .app .lbl { display: none; } .status #clock .d { display: none; } }
-.card-hit { position: fixed; z-index: 7; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 20px; }
-.card-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; }
-.reflect { position: fixed; z-index: 1; pointer-events: none; border-radius: 50%; filter: blur(40px); opacity: .55;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 45%, transparent), transparent); }
-
-.hint { position: fixed; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; z-index: 3; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .05em; }
-.hint kbd { font-family: inherit; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; margin: 0 2px; }
-/* Unfolded iPhone Duo (626x890) and other small tablets: split view. The app shelf turns into a
+  .hero { gap: 8px; max-width: none; }
+  .hero h1 { margin-top: 0; font-size: clamp(32px, 10.5vw, 48px); }
+  .kind { font-size: 13.5px; }
+  .hero p { margin-top: 2px; font-size: 14.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .chips { display: none; }
+  .actions { margin-top: 6px; } .start { min-height: 46px; padding: 0 22px; font-size: 15.5px; }
+  #clock .d { display: none; }
+}
+/* Unfolded iPhone Duo (626x890) and other small tablets: split view. The bar turns into a
    rail down the left side that stays put, and apps run at the full width of the pane beside it,
    at their own size (no scaling). With an app open the rail folds to icons and switches apps. */
 @media (min-width: 600px) and (max-width: 760px) and (min-height: 700px) {
   :root { --rail: 196px; --rail-mini: 72px; }
-  .status { right: auto; bottom: 0; width: var(--rail); box-sizing: border-box; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 22px;
-    padding: calc(26px + env(safe-area-inset-top, 0px)) 12px calc(20px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
-    background: color-mix(in srgb, var(--night) 62%, transparent); border-right: 1px solid var(--line); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
-  }
-  header.status { transition: width .55s var(--ease), padding .55s var(--ease), transform .55s var(--ease), opacity .4s ease; }
-  .status .right { display: flex; order: -1; justify-content: space-between; padding: 0 8px; white-space: nowrap; overflow: hidden; }
-  .status .resume { margin: 0 8px; justify-content: center; } body.app-open .status .resume { display: none; }
-  .status #clock .d { display: inline; } .status .batt { display: block; flex: none; }
-  .shelf { flex: 1 1 auto; flex-direction: column; align-items: stretch; height: auto; gap: 4px; overflow: hidden auto; overscroll-behavior: contain; padding: 0; margin: 0; }
-  .app { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 16px; text-align: left; transition: background .3s, padding .55s var(--ease); }
-  .app.sel { background: var(--chip); box-shadow: inset 0 0 0 1px var(--line); }
-  .icon, .app.sel .icon { flex: none; width: 40px; }
-  .app.sel .icon { box-shadow: 0 8px 20px rgb(0 0 0 / .45), 0 0 0 2px var(--tint), 0 0 22px color-mix(in srgb, var(--tint) 45%, transparent); }
-  .app .lbl { display: block; position: static; translate: none; transform: none; opacity: 1; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; transition: opacity .3s; }
+  .status { right: auto; bottom: 0; width: var(--rail); height: auto; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 6px;
+    padding: calc(22px + env(safe-area-inset-top, 0px)) 12px calc(18px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    border-bottom: 0; border-right: 2px solid var(--ink); }
+  header.status { transition: width .55s var(--ease), padding .55s var(--ease), opacity .3s ease; }
+  .brand, .clock { display: block; align-self: auto; padding: 0 8px; overflow: hidden; }
+  .brand { font-size: 16px; } .clock { font-size: 13px; margin-bottom: 16px; }
+  #clock .d { display: inline; }
+  .status .resume { align-self: flex-start; margin: 0 8px; } body.app-open .status .resume { display: none; }
+  .shelf { flex: 1 1 auto; flex-direction: column; align-items: stretch; gap: 2px; overflow: hidden auto; overscroll-behavior: contain; padding: 0; margin: 0; }
+  .app { display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: auto; padding: 8px; text-align: left; transition: padding .55s var(--ease); }
+  .app::after { left: 0; right: auto; top: 10px; bottom: 10px; width: 3px; height: auto; transform: scaleY(0); }
+  .icon { flex: none; width: 40px; }
+  .app .lbl { display: block; font-size: 14.5px; font-weight: 500; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .3s, color .3s; }
+  .app.sel .lbl { color: var(--ink); font-weight: 700; }
   .home { left: var(--rail); grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "hero" "slot"; align-content: stretch; overflow: hidden; gap: 22px;
     padding: calc(30px + env(safe-area-inset-top, 0px)) max(26px, env(safe-area-inset-right, 0px)) calc(26px + env(safe-area-inset-bottom, 0px)) 26px; }
-  .hero { gap: 12px; max-width: none; } .hero h1 { font-size: 54px !important; } .hero p { display: block; } .chips { display: flex; }
+  .hero { gap: 10px; max-width: none; } .hero h1 { font-size: 52px; } .kind { font-size: 15px; }
+  .hero p { display: block; margin-top: 4px; } .chips { display: flex; }
   .slot { justify-self: center; align-self: stretch; width: auto; height: 100%; max-width: 100%; min-width: 0; aspect-ratio: var(--va); }
   nav.dots { display: none; }
   /* app open: the rail stays, folded to icons */
-  body.app-open header.status { transform: none; opacity: 1; filter: none; pointer-events: auto; width: var(--rail-mini); padding-left: 12px; padding-right: 12px; }
-  body.app-open .status .right { display: none; }
+  body.app-open header.status { opacity: 1; pointer-events: auto; width: var(--rail-mini); padding-left: 12px; padding-right: 12px; }
+  body.app-open .brand, body.app-open .clock { display: none; }
   body.app-open .app { padding: 4px; gap: 0; } body.app-open .app .lbl { opacity: 0; width: 0; }
 }
-@media (max-width: 760px) and (max-height: 700px) { .home { padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); } }
 /* Short landscape (folded iPhone Duo on its side, phones in landscape): card and text side by side, no scrolling. */
 @media (orientation: landscape) and (max-height: 520px) {
+  :root { --bar: 48px; }
+  .app { width: 44px; } .app::after { left: 5px; right: 5px; } .icon { width: 32px; } .app .lbl { display: none; }
   .home { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "hero slot"; align-content: stretch; gap: 10px 24px; overflow: hidden;
-    padding-top: calc(72px + env(safe-area-inset-top, 0px)); padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
-  .slot { justify-self: end; align-self: center; width: min(100%, calc((100dvh - 110px) * var(--var, 1.6))); height: auto; min-width: 0; aspect-ratio: var(--va, 16 / 10); }
-  .hero { gap: 8px; align-content: center; }
-  .hero h1 { font-size: clamp(30px, 9vh, 46px) !important; }
-  .hero p { font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .chips { display: none; } .kind { font-size: 11px; }
-  .start { padding: 10px 22px; font-size: 15px; }
-  .status { padding-top: calc(10px + env(safe-area-inset-top, 0px)); } .shelf { height: 48px; gap: 12px; } .icon { width: 36px; } .app.sel .icon { width: 48px; } .app .lbl { display: none; }
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--bar) + 12px); padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+  .slot { justify-self: end; align-self: center; width: min(100%, calc((100dvh - var(--bar) - 26px) * var(--var, 1.6))); height: auto; min-width: 0; aspect-ratio: var(--va, 16 / 10); }
+  .hero { gap: 8px; justify-content: center; }
+  .hero h1 { margin-top: 0; font-size: clamp(28px, 9vh, 44px); }
+  .hero p { margin-top: 0; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .chips { display: none; } .kind { font-size: 13.5px; }
+  .actions { margin-top: 4px; } .start { min-height: 42px; padding: 0 20px; font-size: 15px; }
 }
-@media (max-width: 760px), (pointer: coarse) { .hint { display: none; } }
+@media (max-width: 760px), (pointer: coarse), (max-height: 520px) { .hint { display: none; } }
 
-.home, .status, .hint, .reflect { transition: transform .55s var(--ease), opacity .4s ease, filter .55s ease; }
-body.app-open .home, body.app-open .status, body.app-open .hint, body.app-open .reflect { transform: scale(.94); opacity: 0; filter: blur(8px); pointer-events: none; }
+.home, .status, .hint { transition: opacity .3s ease; }
+body.app-open .home, body.app-open .status, body.app-open .hint { opacity: 0; pointer-events: none; }
 body.app-open .card-hit { display: none; }
 /* While an app is open, the page behind its window takes the app's own background colour, so
-   the strip under the browser's toolbar (and any overscroll) carries on the app instead of
-   showing the launcher's waves. */
+   the strip under the browser's toolbar (and any overscroll) carries on the app. */
 body { transition: background-color .4s ease; }
 body.app-open { background: var(--app-bg, var(--night)); }
-body.app-open #waves, body.app-open .ambient, body.app-open .grain { visibility: hidden; }
 
 /* The app window. At home it's shrunk with a transform onto the card slot (so the app inside
    keeps its full-screen layout and just looks smaller); Start removes the transform. */
-.window { position: fixed; left: 0; top: 0; width: var(--win-w, 100vw); height: 100vh; height: var(--win-h, 100dvh); z-index: 6; background: var(--deep); display: flex; flex-direction: column;
-  overflow: hidden; transform-origin: 0 0; transform: var(--card, none); border-radius: var(--card-r, 0px); clip-path: var(--clip, inset(0px 0px 0px 0px round 0px));
-  box-shadow: 0 40px 120px rgb(0 0 0 / .55), 0 0 0 1px rgb(255 255 255 / .1);
-  transition: transform .6s var(--ease), border-radius .6s var(--ease), box-shadow .6s, clip-path .6s var(--ease); will-change: transform; }
+.window { position: fixed; left: 0; top: 0; width: var(--win-w, 100vw); height: 100vh; height: var(--win-h, 100dvh); z-index: 6; background: var(--night); display: flex; flex-direction: column;
+  overflow: hidden; transform-origin: 0 0; transform: var(--card, none); clip-path: var(--clip, inset(0px 0px 0px 0px));
+  transition: transform .6s var(--ease), clip-path .6s var(--ease); will-change: transform; }
 .window.preview { pointer-events: none; }
 .window.instant { transition: none; }
-body.app-open .window { box-shadow: none; }
 /* The bar takes the open app's own colour (set by paintBehind). Safari tints its toolbars and the
    strips around the page (the iPhone Duo's side rail, the bottom bar) from the top of the page,
    so a dark bar over a light app would frame it in dark bands and make it look cut off. */
-.bar { position: relative; z-index: 5; display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); background: var(--deep); border-bottom: 1px solid var(--line); }
+.bar { position: relative; z-index: 5; display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); background: var(--night); border-bottom: 1px solid var(--line); font-size: 14.5px; }
 /* Only while an app is open, so the home-screen card's bar always keeps the launcher's dark look.
    Background and ink switch together (no fade), so the labels never sit on a half-faded bar. */
 body.app-open .bar[data-tone] { background: var(--app-bg); color: var(--ink); }
-body.app-open .bar[data-tone="light"] { --ink: #121826; --muted: #5B6478; --chip: rgb(0 0 0 / .05); --line: rgb(0 0 0 / .1); }
-body.app-open .bar[data-tone="dark"] { --ink: #F1F4FF; --muted: #A2ACC8; --chip: rgb(255 255 255 / .08); --line: rgb(255 255 255 / .13); }
-.bar img { width: 22px; height: 22px; border-radius: 6px; }
-.bar .t { font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.app-open .bar[data-tone="light"] { --ink: #000; --muted: #5E5E5E; --line: rgb(0 0 0 / .22); }
+body.app-open .bar[data-tone="dark"] { --ink: #fff; --muted: #A8A8A8; --line: rgb(255 255 255 / .24); }
+.bar img { width: 22px; height: 22px; border-radius: 24%; }
+.bar .t { font-weight: 800; font-stretch: 112%; letter-spacing: -.02em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nt-short { display: none; }
 @media (max-width: 520px) { .nt-long { display: none; } .nt-short { display: inline; font-size: 15px; line-height: 1; } }
 /* Phone-width screens (the folded iPhone Duo beside Safari's rail is ~380px): the icon names the
    app, so drop the name rather than squeeze it to one letter, and tighten the bar. */
-@media (max-width: 440px) { .bar { gap: 8px; } .bar .t { display: none; } .bar .pill { padding: 6px 11px; } .dots button { width: 18px; } }
+@media (max-width: 440px) { .bar { gap: 8px; } .bar .t { display: none; } .bar .pill { padding: 6px 10px; } .dots button { width: 18px; } }
 .bar .sp { flex: 1; }
 .bar { touch-action: pan-y; }
 .dots { display: flex; gap: 2px; align-items: center; }
 .dots button { width: 22px; height: 28px; border: 0; padding: 0; background: none; cursor: pointer; display: grid; place-items: center; }
-.dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); opacity: .45; transition: width .3s var(--ease), opacity .3s, background .3s; }
-.dots button[aria-current="true"]::before { width: 18px; border-radius: 4px; opacity: 1; background: var(--tint); }
+.dots button::before { content: ""; width: 7px; height: 7px; background: var(--muted); opacity: .5; transition: width .3s var(--ease), opacity .3s, background .3s; }
+.dots button[aria-current="true"]::before { width: 18px; opacity: 1; background: var(--tint); }
 .dots:has(button:only-child) { display: none; }
-.pill { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 6px 14px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; cursor: pointer; text-decoration: none; color: var(--ink); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
-.pill:hover { border-color: var(--tint); }
+.pill { border: 1px solid var(--line); background: transparent; border-radius: 0; padding: 6px 12px; font: 600 13px/1.25 var(--sans); cursor: pointer; text-decoration: none; color: var(--ink); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; transition: border-color .15s; }
+.pill:hover { border-color: var(--ink); }
 .frames { flex: 1; position: relative; min-height: 0; }
 iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility 0s .35s; }
 iframe.active { opacity: 1; visibility: visible; transition: opacity .35s ease, visibility 0s; }
 .splash { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: var(--wash); transition: opacity .35s ease, background .6s; pointer-events: none; }
-.splash img { width: 96px; height: 96px; border-radius: 24%; box-shadow: 0 12px 30px rgb(0 0 0 / .35); animation: breathe 1.6s ease-in-out infinite; }
+.splash img { width: 96px; height: 96px; border-radius: 24%; animation: breathe 1.6s ease-in-out infinite; }
 @keyframes breathe { 50% { transform: scale(.94); opacity: .8; } }
 .splash.gone { opacity: 0; }
 .splash.gone img { animation: none; }
 
-/* first visit: a short boot */
+/* first visit: a short boot. The wordmark, and a red rule drawn under it. */
 .boot { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--night); pointer-events: none; animation: bootout .5s ease 1.25s both; }
-.boot b { font-weight: 800; font-size: clamp(28px, 5vw, 52px); letter-spacing: -.02em; opacity: 0; animation: bootin .7s var(--ease) .15s both; }
-.boot b::after { content: ""; display: block; height: 3px; margin-top: 12px; border-radius: 3px; background: linear-gradient(90deg, #34D399, #7FA7FF, #F08A5D); transform-origin: left; animation: bootbar .8s var(--ease) .4s both; }
-@keyframes bootin { from { opacity: 0; transform: translateY(10px); letter-spacing: .1em; } to { opacity: 1; transform: none; } }
+.boot b { font-weight: 800; font-stretch: 112%; font-size: clamp(28px, 5vw, 52px); letter-spacing: -.03em; opacity: 0; animation: bootin .7s var(--ease) .15s both; }
+.boot b::after { content: ""; display: block; height: 4px; margin-top: 12px; background: var(--red); transform-origin: left; animation: bootbar .8s var(--ease) .4s both; }
+@keyframes bootin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes bootbar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes bootout { to { opacity: 0; visibility: hidden; } }
 body:not(.booting) .boot { display: none; }
 body.booting .shelf .app { animation: drop .6s var(--ease) both; }
 body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
-@keyframes drop { from { opacity: 0; transform: translateY(-16px); } }
+@keyframes drop { from { opacity: 0; transform: translateY(-12px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .window, .icon, .splash, .home, .status, .hint, .reflect, iframe, .ambient { transition: none !important; }
+  .window, .icon, .app::after, .splash, .home, .status, .hint, iframe, .start, .pill { transition: none !important; }
   .hero.swap > *, .splash img, body.booting .shelf .app { animation: none !important; }
   .boot { display: none !important; }
 }
@@ -257,22 +260,19 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
 <script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
 <body>
-<canvas id="waves" aria-hidden="true"></canvas>
-<div class="ambient"></div>
-<div class="grain" aria-hidden="true"></div>
-<div class="reflect" id="reflect" aria-hidden="true"></div>
 <div class="boot" aria-hidden="true"><b>bollineni.co</b></div>
 
 <header class="status">
+  <a class="brand" href="/" title="Naren Bollineni's resume">bollineni.co</a>
   <nav class="shelf" id="shelf" aria-label="Apps"></nav>
-  <a class="pill resume" href="/" title="Back to Naren's resume">← Resume</a>
-  <span class="right"><span id="clock">--:--</span><span class="batt" aria-hidden="true"></span></span>
+  <a class="resume" href="/" title="Back to Naren's resume">Resume</a>
+  <span class="clock" id="clock">--:--</span>
 </header>
 
 <main class="home" id="home">
   <section class="hero" id="hero" aria-live="polite">
-    <div class="kind" id="kind"></div>
     <h1 id="title"></h1>
+    <div class="kind" id="kind"></div>
     <p id="pitch"></p>
     <div class="chips" id="chips"></div>
     <div class="actions">
@@ -283,7 +283,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
   <div class="slot" id="slot" aria-hidden="true"></div>
 </main>
 <button class="card-hit" id="cardHit" type="button" aria-label="Open the app"></button>
-<div class="hint"><kbd>←</kbd><kbd>→</kbd> choose · <kbd>Enter</kbd> start · <kbd>Esc</kbd> home · swipe the top bar to switch apps</div>
+<div class="hint"><span><kbd>←</kbd><kbd>→</kbd>choose</span><span><kbd>Enter</kbd>start</span><span><kbd>Esc</kbd>home</span><span>Swipe an open app's top bar to switch apps</span></div>
 
 <section class="window preview" id="win" aria-label="App" aria-hidden="true">
   <div class="bar">
@@ -311,7 +311,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     var b = document.createElement('button'), ic = document.createElement('span'), img = document.createElement('img'), lbl = document.createElement('span');
     b.className = 'app'; b.type = 'button'; b.dataset.app = a.id; b.style.setProperty('--i', i);
     ic.className = 'icon'; img.src = a.icon; img.alt = ''; if (a.iconStyle) img.style.cssText = a.iconStyle;
-    lbl.className = 'lbl'; lbl.textContent = a.name;
+    lbl.className = 'lbl'; lbl.textContent = a.name; b.setAttribute('aria-label', a.name);
     ic.appendChild(img); b.append(ic, lbl); shelfEl.appendChild(b);
     return b;
   });
@@ -322,7 +322,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
   });
   var $ = function (id) { return document.getElementById(id); };
   var win = $('win'), framesEl = $('frames'), splash = $('splash'), slot = $('slot');
-  var cardHit = $('cardHit'), reflect = $('reflect'), heroEl = $('hero');
+  var cardHit = $('cardHit'), heroEl = $('hero'), titleEl = $('title');
   var sel = null, open = null, busy = false, pushed = false;
   var DUR = 600;
 
@@ -410,8 +410,8 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     var v = view();
     root.style.setProperty('--va', v.w + ' / ' + v.h);
     root.style.setProperty('--var', String(v.w / v.h));
-    root.style.setProperty('--card', v.x ? 'translate(' + v.x + 'px,0px)' : 'none'); root.style.setProperty('--card-r', '0px');
-    root.style.setProperty('--clip', 'inset(0px 0px 0px 0px round 0px)');
+    root.style.setProperty('--card', v.x ? 'translate(' + v.x + 'px,0px)' : 'none');
+    root.style.setProperty('--clip', 'inset(0px 0px 0px 0px)');
   }
 
   // Map the window onto the card slot with one transform.
@@ -423,10 +423,15 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     // A card shorter than the scaled screen (phone widths) shows the top of the app, clipped.
     var cut = r.height > 0 && r.height < ch - 1 ? v.h - r.height / s : 0; ch = Math.min(ch, v.h * s - cut * s);
     root.style.setProperty('--card', 'translate(' + r.left + 'px,' + r.top + 'px) scale(' + s + ')');
-    root.style.setProperty('--card-r', (20 / s) + 'px');
-    root.style.setProperty('--clip', 'inset(0px 0px ' + cut + 'px 0px round ' + (20 / s) + 'px)');
+    root.style.setProperty('--clip', 'inset(0px 0px ' + cut + 'px 0px)');
     Object.assign(cardHit.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: ch + 'px' });
-    Object.assign(reflect.style, { left: (r.left + r.width * .1) + 'px', top: (r.top + ch * .85) + 'px', width: (r.width * .8) + 'px', height: (r.width * .25) + 'px' });
+  }
+
+  // The name is set as wide as the resume's. One too long for its column is scaled down to fit.
+  function fitTitle() {
+    titleEl.style.fontSize = '';
+    var room = titleEl.clientWidth, need = titleEl.scrollWidth;
+    if (room > 0 && need > room) titleEl.style.fontSize = Math.floor(parseFloat(getComputedStyle(titleEl).fontSize) * room / need) + 'px';
   }
 
   function select(id, opts) {
@@ -437,7 +442,9 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
     dots.forEach(function (d, i) { d.setAttribute('aria-current', order[i] === id); });
     root.style.setProperty('--tint', a.tint);
     root.style.setProperty('--wash', a.wash);
-    $('kind').textContent = a.kind; $('title').textContent = a.name; $('pitch').textContent = a.pitch;
+    $('kind').textContent = a.kind; $('pitch').textContent = a.pitch;
+    // the name ends in a period in the app's colour, as the name on the resume ends in a red one
+    var dot = document.createElement('i'); dot.textContent = '.'; dot.setAttribute('aria-hidden', 'true'); titleEl.textContent = a.name; titleEl.appendChild(dot); fitTitle();
     $('chips').innerHTML = ''; a.chips.forEach(function (c) { var s = document.createElement('span'); s.textContent = c; $('chips').appendChild(s); });
     $('ghost').href = a.url; // An archived app is a record of a past project, so its button says View.
     $('startLbl').textContent = a.archived ? 'View' : 'Start'; $('start').setAttribute('aria-label', (a.archived ? 'View ' : 'Start ') + a.name); cardHit.setAttribute('aria-label', 'Open ' + a.name);
@@ -573,14 +580,14 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
   addEventListener('hashchange', function () { var id = location.hash.slice(1); if (!open && APPS[id]) { history.replaceState(null, '', location.pathname); launch(id); } });
   addEventListener('resize', function () {
     if (open) { win.classList.add('instant'); placeOpen(); requestAnimationFrame(function () { win.classList.remove('instant'); }); return; }
-    win.classList.add('instant'); placeCard(); requestAnimationFrame(function () { win.classList.remove('instant'); });
+    win.classList.add('instant'); fitTitle(); placeCard(); requestAnimationFrame(function () { win.classList.remove('instant'); });
   });
 
   addEventListener('keydown', function (e) {
     if (open) { if (e.key === 'Escape') home(); return; }
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { step(1); buttons[order.indexOf(sel)].focus({ preventScroll: true }); e.preventDefault(); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { step(-1); buttons[order.indexOf(sel)].focus({ preventScroll: true }); e.preventDefault(); }
-    else if (e.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('.actions, .app, .card-hit, .resume'))) { launch(sel); e.preventDefault(); }
+    else if (e.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('.actions, .app, .card-hit, .resume, .brand'))) { launch(sel); e.preventDefault(); }
   });
 
   // An app loading behind the home screen can focus one of its own fields, which would
@@ -591,12 +598,6 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
       if (!open && f && f.tagName === 'IFRAME' && f.closest('#frames')) { f.blur(); buttons[order.indexOf(sel)].focus({ preventScroll: true }); }
     });
   });
-
-  // the background wash follows the pointer a little
-  if (fine && !reducedMQ.matches) addEventListener('pointermove', function (e) {
-    root.style.setProperty('--mx', (50 + (e.clientX / innerWidth - .5) * 30) + '%');
-    root.style.setProperty('--my', (40 + (e.clientY / innerHeight - .5) * 20) + '%');
-  }, { passive: true });
 
   // boot: once per visit
   try { if (!sessionStorage.getItem('booted') && !reducedMQ.matches) { document.body.classList.add('booting'); sessionStorage.setItem('booted', '1'); setTimeout(function () { document.body.classList.remove('booting'); }, 2100); } } catch (e) {}
@@ -609,7 +610,7 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
   // A link straight to an app (#gridline) opens it, with the launcher one Back away.
   if (APPS[start]) { history.replaceState(null, '', location.pathname); launch(start, { instant: true }); }
   // fonts can shift the layout once they arrive
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!open) { win.classList.add('instant'); placeCard(); requestAnimationFrame(function () { win.classList.remove('instant'); }); } });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { fitTitle(); if (!open) { win.classList.add('instant'); placeCard(); requestAnimationFrame(function () { win.classList.remove('instant'); }); } });
 
   // Once the selected app is in, load its neighbours in the background, so the next swipe
   // or arrow lands on an app that's already running. Only neighbours: with many apps,
@@ -629,35 +630,6 @@ body.booting .shelf .app { animation-delay: calc(1.3s + var(--i, 0) * .08s); }
   function tick() { var d = new Date(); $('clock').innerHTML = '<span class="d">' + d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + '&nbsp; </span>' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
   tick(); setInterval(tick, 15000);
 
-  // drifting light waves, tinted with the selected app's colour; paused while an app is open
-  var c = $('waves'), x = c.getContext('2d'), t = 0, w, h, dpr, rgb = [127, 167, 255];
-  function size() { dpr = Math.min(devicePixelRatio || 1, 2); w = innerWidth; h = innerHeight; c.width = w * dpr; c.height = h * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0); }
-  size(); addEventListener('resize', size);
-  function hex(s) { return [1, 3, 5].map(function (i) { return parseInt(s.slice(i, i + 2), 16); }); }
-  function frame() {
-    if (open) { setTimeout(frame, 400); return; }
-    var target = hex(APPS[sel] ? APPS[sel].tint : '#7FA7FF');
-    rgb = rgb.map(function (v, i) { return v + (target[i] - v) * .04; });
-    var g = x.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#070A14'); g.addColorStop(1, 'rgb(' + rgb.map(function (v) { return Math.round(v * .14); }).join(',') + ')');
-    x.fillStyle = g; x.fillRect(0, 0, w, h);
-    var col = rgb.map(Math.round).join(',');
-    for (var k = 0; k < 5; k++) {
-      x.beginPath();
-      for (var px = 0; px <= w; px += 8) {
-        var y = h * (.66 + k * .04) + Math.sin(px / (260 + k * 70) + t * (0.6 + k * .15) + k) * (26 + k * 10) + Math.sin(px / 120 + t * 1.3 + k * 2) * 6;
-        px === 0 ? x.moveTo(px, y) : x.lineTo(px, y);
-      }
-      x.strokeStyle = 'rgba(' + col + ',' + (0.34 - k * 0.055) + ')';
-      x.lineWidth = 1.2 + (4 - k) * .5;
-      x.shadowColor = 'rgba(' + col + ',.7)'; x.shadowBlur = 14;
-      x.stroke();
-    }
-    x.shadowBlur = 0;
-    if (!reducedMQ.matches) t += 0.008;
-    requestAnimationFrame(frame);
-  }
-  frame();
 })();
 </script>
 </body>
