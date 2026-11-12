@@ -1,9 +1,10 @@
 # bollineni-create launcher
 
-A console-style home screen that opens each app inside the site: https://bollineni-create.vercel.app
+bollineni.co's front page is Naren's resume (`site/index.html`), shared from LinkedIn only and kept out of search engines (noindex meta tag plus an `X-Robots-Tag` header in `vercel.json`). The console-style app launcher lives at https://bollineni.co/apps (`site/apps/index.html`); old links like `bollineni.co/#gridline` forward to `/apps#gridline`.
 
 - `apps.json`: the list of apps on the shelf.
-- `site/index.html`: the launcher page.
+- `site/index.html`: the resume (front page).
+- `site/apps/index.html`: the launcher page.
 - `build.mjs`: pulls each app from GitHub into `public/<id>/` and writes the shelf into the page.
 - `api/relay.js`: the server relay that adds API keys to an app's requests.
 - `vercel.json`: Vercel config. It runs `node build.mjs` on every deploy, and sets the security headers and caching.

@@ -7,7 +7,7 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, ex
 import { extname } from 'node:path';
 
 const OUT = 'public', SRC = '.src';
-const RESERVED = new Set(['api', 'icons', 'legal']);
+const RESERVED = new Set(['api', 'icons', 'legal', 'apps']);
 const apps = JSON.parse(readFileSync('apps.json', 'utf8'));
 const lock = existsSync('apps.lock.json') ? JSON.parse(readFileSync('apps.lock.json', 'utf8')) : {};
 
@@ -106,15 +106,23 @@ for (const a of apps) {
       .replace(/[ \t]*<meta\b[^>]*\bname\s*=\s*["']?(?:apple-mobile-web-app-capable|mobile-web-app-capable|apple-mobile-web-app-title)["'\s][^>]*>[ \t]*\r?\n?/gi, '')
       .replace('</head>', `${appHead}\n</head>`));
   }
-  shelf.push({ id: a.id, name: a.name, icon, iconStyle: a.iconStyle || '', url: `/${a.id}/`, kind: a.kind,
+  shelf.push({ id: a.id, name: a.name, icon: `/${icon}`, iconStyle: a.iconStyle || '', url: `/${a.id}/`, kind: a.kind,
     pitch: a.pitch, chips: a.chips || [], tint: a.tint, wash: a.wash, ownsEsc: !!a.ownsEsc, archived: !!a.archived });
 }
 
-const pagePath = `${OUT}/index.html`;
+// The launcher lives at /apps; the site's front page (site/index.html) is Naren's resume.
+const pagePath = `${OUT}/apps/index.html`;
 const page = readFileSync(pagePath, 'utf8');
-if (!page.includes('/*APPS*/[]')) throw new Error('site/index.html: no /*APPS*/[] placeholder.');
+if (!page.includes('/*APPS*/[]')) throw new Error('site/apps/index.html: no /*APPS*/[] placeholder.');
 writeFileSync(pagePath, page
   .replace('/*APPS*/[]', JSON.stringify(shelf).replace(/</g, '\\u003c'))
   .replaceAll('{{APP_NAMES}}', esc(shelf.map((a) => a.name).join(', '))));
+
+// Old links like bollineni.co/#gridline still open the app: the resume page forwards
+// any app hash to /apps#<id>, so it needs the list of app ids.
+const homePath = `${OUT}/index.html`;
+const home = readFileSync(homePath, 'utf8');
+if (!home.includes('/*APP_IDS*/[]')) throw new Error('site/index.html: no /*APP_IDS*/[] placeholder.');
+writeFileSync(homePath, home.replace('/*APP_IDS*/[]', JSON.stringify(shelf.map((a) => a.id))));
 
 console.log(`Built ${shelf.length} apps: ${shelf.map((a) => a.id).join(', ')}`);
