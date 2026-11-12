@@ -144,7 +144,7 @@ dd { margin: 0; color: var(--body); }
 .also .when { color: var(--night-quiet); margin-right: 14px; font-weight: 400; }
 
 /* Sign-off */
-.contact { margin-top: 112px; border-top: 2px solid var(--ink); padding-top: 28px; container-type: inline-size; }
+.contact { margin-top: 72px; container-type: inline-size; }
 .contact p { margin: 0 0 6px; color: var(--quiet); font-size: 15px; }
 .mailto { display: inline-block; font-size: clamp(20px, 6.8cqw, 92px); line-height: 1.05; text-decoration: none; white-space: nowrap; letter-spacing: -.045em; }
 footer { margin-top: 40px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; font-size: 14px; }
@@ -164,7 +164,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .night-top .btn { grid-column: 1 / -1; justify-self: start; }
   .apps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .also h3, .also p { grid-column: 1 / -1; } .also .links { grid-column: 1 / -1; text-align: left; margin-top: 4px; }
-  .contact { margin-top: 80px; }
+  .contact { margin-top: 56px; }
 }
 /* Phones and the folded Duo (~380px) */
 @media (max-width: 600px) {
@@ -189,7 +189,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .app { min-height: 0; padding: 18px; grid-template-columns: 52px minmax(0, 1fr); gap: 2px 14px; }
   .app-icon { width: 52px; height: 52px; } .app-name { font-size: 21px; } .app-pitch { margin-top: 10px; font-size: 15px; }
   dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } dd { margin-bottom: 10px; }
-  .contact { margin-top: 64px; }
+  .contact { margin-top: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -236,8 +236,8 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     <nav aria-label="Sections">
       <a href="#record">Record</a>
       <a href="#experience">Experience</a>
-      <a href="#apps">Apps</a>
       <a href="#research">Research</a>
+      <a href="#apps">Apps</a>
       <a class="mail" href="mailto:naren.bollineni@icloud.com">Contact</a>
     </nav>
   </div>
@@ -308,21 +308,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     </div>
   </section>
 
-  <section id="apps" class="night">
-    <div class="wrap">
-      <div class="night-top">
-        <h2 class="wide">Apps</h2>
-        <p>Browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo.</p>
-        <a class="btn noprint" href="/apps">Open the launcher</a>
-      </div>
-      <div class="apps"><!--APP_TILES--></div>
-      <div class="also">
-        <div class="row"><h3>Project Downtown Tampa iOS</h3><p>A Swift app for volunteers to crowdsource field data on unhoused neighbors and share resources.</p><span class="links noprint"><span class="when">2024</span><a href="https://github.com/bollineni-create/projectdowntowntampa-ios" rel="noopener">Code</a></span></div>
-        <div class="row"><h3>StudyBuddy</h3><p>Microsoft hackathon project lead: a classroom app on Azure with a GPT-4 tutor for students.</p><span class="links noprint"><span class="when">2023</span><a href="https://github.com/ammarali0416/StudyBuddy" rel="noopener">Code</a></span></div>
-      </div>
-    </div>
-  </section>
-
   <section id="research" class="wrap split">
     <h2 class="wide">Research</h2>
     <div class="rows">
@@ -375,6 +360,20 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
           <li>Allocated <b>$5MM</b> on USF's Green Energy Fund Council.</li>
           <li>State-certified HIV/AIDS counselor, BRIDGE Clinic.</li>
         </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="apps" class="night">
+    <div class="wrap">
+      <div class="night-top">
+        <h2 class="wide">Apps</h2>
+        <p>Browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo.</p>
+        <a class="btn noprint" href="/apps">Open the launcher</a>
+      </div>
+      <div class="apps"><!--APP_TILES--></div>
+      <div class="also">
+        <div class="row"><h3>StudyBuddy</h3><p>Microsoft hackathon project lead: a classroom app on Azure with a GPT-4 tutor for students.</p><span class="links noprint"><span class="when">2023</span><a href="https://github.com/ammarali0416/StudyBuddy" rel="noopener">Code</a></span></div>
       </div>
     </div>
   </section>
