@@ -117,5 +117,24 @@
     ],
     "tint": "#E07A52",
     "wash": "#1B1411"
+  },
+  {
+    "id": "pdt",
+    "name": "PDT App",
+    "repo": "https://github.com/bollineni-create/projectdowntowntampa-ios.git",
+    "root": "web",
+    "files": ["index.html", "assets"],
+    "icon": "web/assets/icon.png",
+    "installIcon": "web/assets/icon-512.png",
+    "kind": "Archived · iOS volunteer app",
+    "pitch": "An iOS app for the volunteers and board of Project Downtown Tampa: the route, the headcount at each stop, and the resource list. Archived; the page keeps a working copy of the counter.",
+    "chips": [
+      "Archived project",
+      "SwiftUI + Appwrite",
+      "Try the counter"
+    ],
+    "tint": "#0199F5",
+    "wash": "#04202F",
+    "archived": true
   }
 ]
