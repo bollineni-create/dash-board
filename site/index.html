@@ -26,224 +26,302 @@
   // Old links to an app (bollineni.co/#gridline) now live under /apps, and home-screen
   // installs made before the move (iOS keeps the URL saved at install, "/") still open the
   // launcher: a page running standalone is an installed app, never a LinkedIn visitor.
+  // The one exception is someone who tapped "← Resume" in the launcher: they asked for this page.
   (function () {
     var ids = /*APP_IDS*/[]; var h = location.hash.slice(1);
     if (h && ids.indexOf(h) > -1) { location.replace('/apps#' + h); return; }
     var standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-    if (standalone) location.replace('/apps');
+    var fromLauncher = document.referrer.indexOf(location.origin + '/apps') === 0;
+    if (standalone && !fromLauncher) location.replace('/apps');
   })();
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700;800&display=swap">
+<link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* Swiss Tombstone: white page, black type, one red accent, deal-tombstone stat boxes. */
-:root { color-scheme: light; --ink: #111; --soft: #333; --faint: #595959; --paper: #fff; --red: #D62E1F; --sans: "Inter Tight", -apple-system, "Helvetica Neue", Arial, sans-serif; }
+/* Swiss Tombstone: white page, black type, one red accent, deal-tombstone stat boxes.
+   One typeface (Archivo, served from /fonts) in two widths: wide and heavy for the name,
+   the figures and the headings; regular for reading. The only other colour on the page
+   belongs to the apps: each tile lights up in its own tint. */
+@font-face { font-family: "Archivo"; src: url("/fonts/archivo.woff2") format("woff2");
+  font-weight: 100 900; font-stretch: 62% 125%; font-style: normal; font-display: swap; }
+:root { color-scheme: light; --ink: #000; --body: #262626; --quiet: #5E5E5E; --paper: #fff; --red: #D62E1F;
+  --night-line: #303030; --night-quiet: #A8A8A8; --night-body: #DADADA;
+  --sans: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --side: max(32px, env(safe-area-inset-left), env(safe-area-inset-right)); --bar: 57px; }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: calc(var(--bar) + env(safe-area-inset-top) + 20px); }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 var(--sans); -webkit-font-smoothing: antialiased; overflow-wrap: anywhere; }
-a { color: var(--ink); text-underline-offset: 3px; }
+a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { color: var(--red); }
 :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
-.page { max-width: 1280px; margin: 0 auto;
-  padding: calc(32px + env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) 72px max(32px, env(safe-area-inset-left)); }
-.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px;
-  border-bottom: 2px solid var(--ink); padding-bottom: 14px; font-size: 14px; }
-.top b { font-weight: 700; }
-.top nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
-.top nav a { text-decoration: none; padding: 10px 0; }
-.top nav a.red { color: var(--red); }
-h1 { margin: 56px 0 40px; font-size: clamp(64px, 11vw, 148px); font-weight: 800; line-height: .9; letter-spacing: -.05em; }
-h1 span { color: var(--red); }
-.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; }
-.role { grid-column: span 4; margin: 0; font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; line-height: 1.6; }
-.lede { grid-column: span 8; margin: 0; font-size: clamp(22px, 2.4vw, 28px); line-height: 1.3; font-weight: 500; letter-spacing: -.01em; }
-.actions { grid-column: 5 / span 8; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-.btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border: 2px solid var(--ink); font: 700 14px/1 var(--sans);
-  text-decoration: none; background: var(--paper); color: var(--ink); cursor: pointer; }
+.sr { position: absolute; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip:focus { z-index: 9; top: 8px; left: 8px; width: auto; height: auto; clip-path: none; padding: 12px 16px; background: var(--ink); color: var(--paper); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 0 var(--side); }
+.wide { font-stretch: 112%; font-weight: 800; letter-spacing: -.03em; }
+
+/* Top bar: stays put, marks the section being read */
+.bar { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 2px solid var(--ink); padding-top: env(safe-area-inset-top); }
+.bar .wrap { display: flex; justify-content: space-between; align-items: center; gap: 24px; min-height: 55px; font-size: 14.5px; }
+.brand { font-weight: 800; font-stretch: 112%; letter-spacing: -.02em; text-decoration: none; }
+.bar nav { display: flex; gap: 22px; }
+.bar nav a { text-decoration: none; padding: 16px 0; font-weight: 500; position: relative; white-space: nowrap; }
+.bar nav a.here::after { content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: var(--red); }
+.bar nav a.mail { color: var(--red); }
+
+/* The name fills the measure, edge to edge */
+.hero { container-type: inline-size; padding-top: 44px; }
+h1 { margin: 0; font-size: clamp(48px, 18.5cqw, 244px); font-weight: 900; font-stretch: 125%; line-height: .84; letter-spacing: -.055em; white-space: nowrap; margin-left: -.06em; }
+h1 .ln { display: block; overflow: hidden; padding: .06em 0 .04em; margin: -.06em 0 -.04em; }
+h1 .ln > span { display: block; animation: rise .9s cubic-bezier(.16,1,.3,1) both; }
+h1 .ln + .ln > span { animation-delay: .09s; }
+h1 i { font-style: normal; color: var(--red); }
+@keyframes rise { from { transform: translateY(104%); } }
+.intro { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 20px 24px; margin-top: 44px; }
+.role { grid-column: span 4; margin: 0; font-size: 16px; font-weight: 600; line-height: 1.5; }
+.role span { display: block; font-weight: 400; color: var(--quiet); }
+.lede { grid-column: span 8; margin: 0; max-width: 30em; font-size: clamp(22px, 2.3vw, 30px); line-height: 1.28; font-weight: 500; letter-spacing: -.015em; }
+.actions { grid-column: 5 / -1; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.btn { display: inline-flex; align-items: center; min-height: 46px; padding: 0 20px; border: 2px solid var(--ink); border-radius: 0; font: 700 14.5px/1 var(--sans);
+  text-decoration: none; background: var(--paper); color: var(--ink); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .btn.solid { background: var(--ink); color: var(--paper); }
 .btn:hover { background: var(--red); border-color: var(--red); color: var(--paper); }
-section { margin-top: 72px; scroll-margin-top: 24px; }
-h2 { margin: 0 0 14px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--red); }
-.tombs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.tomb { border: 2px solid var(--ink); padding: 22px 20px; min-height: 190px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+
+/* Record: four tombstones, joined like a deal announcement */
+#record { margin-top: 64px; container-type: inline-size; }
+.matter { margin: 0 0 12px; font-size: 14px; color: var(--quiet); }
+.tombs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; background: var(--ink); border: 2px solid var(--ink); }
+.tomb { background: var(--paper); padding: 20px 20px 18px; min-height: 216px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
 .tomb.inv { background: var(--ink); color: var(--paper); }
-.tomb small { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-.tomb b { white-space: nowrap; font-size: clamp(34px, 3.4vw, 50px); font-weight: 800; letter-spacing: -.04em; line-height: 1; }
-.tomb span { font-size: 13.5px; color: var(--faint); }
-.tomb.inv span { color: #CFCFCF; }
-.row { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; padding: 22px 0; border-top: 1px solid var(--ink); }
-.row:first-of-type { border-top-width: 2px; }
-.row .when { grid-column: span 3; font-size: 15px; padding-top: 6px; }
-.row .what { grid-column: span 9; }
-h3 { margin: 0; font-size: clamp(22px, 2.3vw, 30px); font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
-.org { margin: 4px 0 10px; color: var(--faint); font-size: 15px; }
-ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
-li { position: relative; padding-left: 20px; color: var(--soft); }
-li::before { content: ""; position: absolute; left: 0; top: .72em; width: 10px; height: 2px; background: var(--red); }
-li b { color: var(--ink); }
+.tomb small { font-size: 15px; font-weight: 600; }
+.tomb b { position: relative; white-space: nowrap; font-size: clamp(32px, 4cqw, 54px); font-weight: 800; font-stretch: 112%; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
+.tomb > span { font-size: 14px; color: var(--quiet); }
+.tomb.inv > span { color: #C9C9C9; }
+
+/* Sections: heading in the left column, content on the right */
+.split { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0 24px; margin-top: 104px; }
+h2 { margin: 0; font-size: clamp(30px, 3.3vw, 46px); line-height: 1; }
+.split > h2 { grid-column: span 4; align-self: start; position: sticky; top: calc(var(--bar) + env(safe-area-inset-top) + 24px); padding-top: 18px; }
+.split > .rows { grid-column: span 8; }
+.row { padding: 20px 0 24px; border-top: 1px solid var(--ink); }
+.rows > .row:first-child { border-top-width: 2px; }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 24px; flex-wrap: wrap; }
+h3 { margin: 0; font-size: clamp(21px, 2vw, 26px); font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.when { font-size: 15px; color: var(--quiet); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.org { margin: 3px 0 12px; color: var(--quiet); font-size: 15.5px; }
+ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; max-width: 43em; }
+li { position: relative; padding-left: 22px; color: var(--body); }
+li::before { content: ""; position: absolute; left: 0; top: .72em; width: 11px; height: 2px; background: var(--red); }
+li b { color: var(--ink); font-weight: 700; }
 .pubs li { padding-left: 0; } .pubs li::before { display: none; }
 .pubs cite { font-style: normal; font-weight: 700; color: var(--ink); }
-.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.card { border: 2px solid var(--ink); padding: 22px; display: flex; flex-direction: column; gap: 8px; }
-.card .when { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
-.card h3 { font-size: 22px; }
-.card p { margin: 0; color: var(--soft); font-size: 15.5px; }
-.card a.more { margin-top: auto; padding-top: 8px; font-weight: 700; font-size: 14px; color: var(--red); text-decoration: none; }
-dl { margin: 22px 0 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px 24px; }
-dt { grid-column: span 3; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; padding-top: 3px; }
-dd { grid-column: span 9; margin: 0; color: var(--soft); }
+dl { margin: 0; display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: 10px 24px; max-width: 43em; }
+dt { font-weight: 600; font-size: 15px; padding-top: 2px; }
+dd { margin: 0; color: var(--body); }
+
+/* Apps: the one dark room on the page, and the only place with colour */
+.night { margin-top: 104px; background: var(--ink); color: var(--paper); padding: 84px 0 88px; }
+.night-top { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px 24px; align-items: end; }
+.night-top h2 { grid-column: span 4; }
+.night-top p { grid-column: span 5; margin: 0; color: var(--night-body); max-width: 30em; }
+.night-top .btn { grid-column: span 3; justify-self: end; background: var(--paper); border-color: var(--paper); }
+.night-top .btn:hover { background: var(--red); border-color: var(--red); }
+.apps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 40px; }
+.app { --tint: #fff; --wash: #1a1a1a; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 4px 18px; align-content: start; padding: 22px; min-height: 196px;
+  border: 1px solid var(--night-line); color: var(--paper); text-decoration: none; transition: background .25s, border-color .25s; }
+.app:hover, .app:focus-visible { color: var(--paper); background: var(--wash); border-color: var(--tint); }
+.app:focus-visible { outline-color: var(--tint); }
+.app-icon { grid-row: span 2; width: 60px; height: 60px; border-radius: 24%; overflow: hidden; }
+.app-icon img { width: 100%; height: 100%; display: block; }
+.app-name { align-self: end; font-size: 23px; font-weight: 800; font-stretch: 112%; letter-spacing: -.03em; line-height: 1.1; }
+.app-name em { font-style: normal; font-stretch: 100%; font-weight: 500; font-size: 12.5px; letter-spacing: 0; margin-left: 8px; padding: 2px 7px; border: 1px solid var(--night-line); color: var(--night-quiet); vertical-align: 3px; white-space: nowrap; }
+.app-kind { font-size: 14px; color: var(--tint); }
+.app-pitch { grid-column: 1 / -1; margin-top: 14px; font-size: 15.5px; line-height: 1.5; color: var(--night-body); }
+.also { margin-top: 44px; border-top: 1px solid var(--night-line); }
+.also .row { border-color: var(--night-line); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px 24px; align-items: baseline; padding: 18px 0; }
+.also h3 { grid-column: span 4; font-size: 19px; }
+.also p { grid-column: span 6; margin: 0; color: var(--night-body); font-size: 15.5px; }
+.also .links { grid-column: span 2; text-align: right; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.also .when { color: var(--night-quiet); margin-right: 14px; font-weight: 400; }
+
+/* Sign-off */
+.contact { margin-top: 72px; container-type: inline-size; }
+.contact p { margin: 0 0 6px; color: var(--quiet); font-size: 15px; }
+.mailto { display: inline-block; font-size: clamp(20px, 6.8cqw, 92px); line-height: 1.05; text-decoration: none; white-space: nowrap; letter-spacing: -.045em; }
+footer { margin-top: 40px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; font-size: 14px; }
+footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 .print-only { display: none; }
-footer { margin-top: 72px; border-top: 2px solid var(--ink); padding-top: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; }
 
 /* Tablet and the unfolded iPhone Duo */
 @media (max-width: 960px) {
-  .tombs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .role, .lede, .actions { grid-column: 1 / -1; }
+  .tombs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tomb { min-height: 172px; } .tomb b { font-size: clamp(32px, 7.4cqw, 60px); }
+  .split { margin-top: 80px; }
+  .split > h2, .split > .rows { grid-column: 1 / -1; }
+  .split > h2 { position: static; padding: 0 0 18px; }
+  .night { margin-top: 80px; padding: 64px 0; }
+  .night-top h2, .night-top p { grid-column: 1 / -1; }
+  .night-top .btn { grid-column: 1 / -1; justify-self: start; }
+  .apps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .also h3, .also p { grid-column: 1 / -1; } .also .links { grid-column: 1 / -1; text-align: left; margin-top: 4px; }
+  .contact { margin-top: 56px; }
 }
 /* Phones and the folded Duo (~380px) */
 @media (max-width: 600px) {
+  :root { --side: max(18px, env(safe-area-inset-left), env(safe-area-inset-right)); --bar: 49px; }
   body { font-size: 16px; }
-  .page { padding-left: max(18px, env(safe-area-inset-left)); padding-right: max(18px, env(safe-area-inset-right)); }
-  h1 { margin: 36px 0 28px; }
-  .grid, .row, dl { gap: 10px; }
-  .row .when, .row .what, dt, dd { grid-column: 1 / -1; }
-  .row .when { padding-top: 0; }
-  .tombs { gap: 10px; } .tomb { min-height: 150px; padding: 16px 14px; } .tomb b { font-size: clamp(26px, 8vw, 34px); }
-  .cards { grid-template-columns: minmax(0, 1fr); }
-  section { margin-top: 56px; }
+  .bar .wrap { min-height: 47px; font-size: 13.5px; }
+  .brand { display: none; }
+  .bar nav { flex: 1; justify-content: space-between; gap: 12px; overflow-x: auto; scrollbar-width: none; }
+  .bar nav a { padding: 13px 0; }
+  .hero { padding-top: 28px; }
+  .intro { margin-top: 28px; gap: 14px; }
+  .btn { padding: 0 16px; }
+  #record { margin-top: 44px; }
+  /* On a phone the tombstones stack into a ledger: what it is on the left, the figure on the right. */
+  .tombs { grid-template-columns: minmax(0, 1fr); }
+  .tomb { min-height: 0; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "label figure" "note figure"; gap: 2px 14px; align-items: center; }
+  .tomb small { grid-area: label; align-self: end; font-size: 14.5px; } .tomb > span { grid-area: note; align-self: start; font-size: 13px; line-height: 1.4; }
+  .tomb b { grid-area: figure; font-size: 34px; text-align: right; }
+  .split { margin-top: 64px; }
+  .night { margin-top: 64px; padding: 52px 0 56px; }
+  .apps { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 28px; }
+  .app { min-height: 0; padding: 18px; grid-template-columns: 52px minmax(0, 1fr); gap: 2px 14px; }
+  .app-icon { width: 52px; height: 52px; } .app-name { font-size: 21px; } .app-pitch { margin-top: 10px; font-size: 15px; }
+  dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } dd { margin-bottom: 10px; }
+  .contact { margin-top: 44px; }
 }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-/* Save as PDF: compact, ink-only */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  h1 .ln > span { animation: none; } .btn, .app { transition: none; }
+}
+/* Printing (Cmd/Ctrl+P): compact, ink-only */
 @media print {
   @page { margin: 13mm; }
-  body { font-size: 10pt; line-height: 1.4; }
-  .page { padding: 0; max-width: none; }
-  .top nav, .actions, .noprint, footer { display: none !important; }
-  .print-only { display: block; grid-column: 1 / -1; margin: 4px 0 0; font-size: 10pt; }
-  h1 { font-size: 30pt; margin: 10px 0 8px; }
-  .lede { font-size: 12pt; }
-  section { margin-top: 14px; break-inside: auto; }
-  .tombs { gap: 6px; } .tomb { min-height: 0; padding: 8px; } .tomb b { font-size: 20pt; }
-  .tomb.inv { background: #fff; color: #000; } .tomb.inv span { color: #333; }
-  .row { padding: 6px 0; break-inside: avoid; }
-  h3 { font-size: 12pt; } .org { margin: 0 0 3px; font-size: 9.5pt; }
-  ul { gap: 2px; } li { font-size: 9.5pt; }
-  .cards { gap: 6px; } .card { padding: 8px; }
+  body { font-size: 9.5pt; line-height: 1.38; }
+  .wrap { padding: 0; max-width: none; }
+  .bar, .actions, .noprint, footer, .night-top .btn, .app-icon, .app-pitch, .contact { display: none !important; }
+  .print-only { display: block; grid-column: 1 / -1; margin: 0; font-size: 9.5pt; }
+  .hero { padding-top: 0; }
+  h1 { font-size: 30pt; margin: 0; letter-spacing: -.04em; } h1 br { display: none; } h1 .ln { display: inline; overflow: visible; } h1 .ln > span { display: inline; animation: none; }
+  .intro { margin-top: 8px; gap: 4px 16px; } .role { font-size: 10pt; } .lede { font-size: 11.5pt; max-width: none; }
+  #record { margin-top: 10px; } .matter { display: none; }
+  .tombs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; border-width: 1px; }
+  .tomb { min-height: 0; padding: 7px 8px; gap: 3px; } .tomb b { font-size: 18pt; } .tomb small, .tomb > span { font-size: 8pt; }
+  .tomb.inv { background: #fff; color: #000; } .tomb.inv > span { color: #333; }
+  /* Print the real figures even if the count-up is still running. */
+  .tomb b [data-to] { display: none; } .tomb b .sr { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .split { display: block; margin-top: 12px; }
+  h2 { font-size: 12pt; letter-spacing: -.01em; } .split > h2 { position: static; padding: 0 0 4px; }
+  .row { padding: 5px 0 6px; break-inside: avoid; border-top-width: .5pt !important; }
+  h3 { font-size: 11pt; } .when { font-size: 9pt; } .org { margin: 0 0 2px; font-size: 9pt; }
+  ul { gap: 1px; max-width: none; } li { padding-left: 14px; } li::before { width: 7px; background: #000; }
+  dl { max-width: none; gap: 2px 16px; margin-top: 4px; } dt { font-size: 9pt; }
+  .night { margin-top: 12px; padding: 0; background: #fff; color: #000; }
+  .night-top { display: block; } .night-top p { color: #000; max-width: none; margin-top: 3px; }
+  .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 16px; margin-top: 5px; }
+  .app { display: block; min-height: 0; padding: 0; border: 0; color: #000; }
+  .app-name { font-size: 10pt; } .app-name em { display: none; } .app-kind { display: block; font-size: 8.5pt; color: #333; }
+  .also { margin-top: 5px; border: 0; } .also .row { display: block; padding: 2px 0; border: 0; }
+  .also h3 { display: inline; font-size: 10pt; margin-right: .5em; } .also p { display: inline; color: #000; font-size: 9.5pt; } .also .links { display: none; }
   a { text-decoration: none; }
 }
 </style>
 </head>
 <body>
-<div class="page">
-  <header class="top">
-    <b>bollineni.co</b>
+<a class="sr skip" href="#main">Skip to content</a>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top">bollineni.co</a>
     <nav aria-label="Sections">
       <a href="#record">Record</a>
       <a href="#experience">Experience</a>
       <a href="#research">Research</a>
-      <a href="#building">Building</a>
-      <a class="red" href="mailto:naren.bollineni@icloud.com">Contact</a>
+      <a href="#apps">Apps</a>
+      <a class="mail" href="mailto:naren.bollineni@icloud.com">Contact</a>
     </nav>
-  </header>
+  </div>
+</header>
 
-  <h1>Naren<br>Bollineni<span>.</span></h1>
-
-  <div class="grid">
-    <p class="role">Corporate Banker<br>J.P. Morgan · Seattle<br>Economics, USF Honors</p>
-    <p class="lede">I help commercial real estate clients move and grow their money. Economist by training, researcher by habit, builder on the side.</p>
-    <p class="print-only">naren.bollineni@icloud.com · linkedin.com/in/narenbollineni · github.com/bollineni-create · bollineni.co</p>
-    <div class="actions">
-      <a class="btn solid" href="mailto:naren.bollineni@icloud.com">Email me</a>
-      <a class="btn" href="https://www.linkedin.com/in/narenbollineni/" rel="noopener">LinkedIn</a>
-      <a class="btn" href="https://github.com/bollineni-create" rel="noopener">GitHub</a>
+<main id="main">
+  <div class="wrap hero" id="top">
+    <h1 aria-label="Naren Bollineni"><span class="ln"><span>Naren</span></span> <span class="ln"><span>Bollineni<i>.</i></span></span></h1>
+    <div class="intro">
+      <p class="role">Corporate Banker <span>J.P. Morgan, Seattle</span> <span>Economics, USF Honors</span></p>
+      <p class="lede">I help commercial real estate clients move and grow their money. Economist by training, researcher by habit, builder on the side.</p>
+      <p class="print-only">naren.bollineni@icloud.com · linkedin.com/in/narenbollineni · github.com/bollineni-create · bollineni.co</p>
+      <div class="actions">
+        <a class="btn solid" href="mailto:naren.bollineni@icloud.com">Email me</a>
+        <a class="btn" href="https://www.linkedin.com/in/narenbollineni/" rel="noopener">LinkedIn</a>
+        <a class="btn" href="https://github.com/bollineni-create" rel="noopener">GitHub</a>
+      </div>
     </div>
   </div>
 
-  <section id="record">
-    <h2>Record</h2>
+  <section id="record" class="wrap" aria-label="Record">
+    <p class="matter noprint">This announcement appears as a matter of record only.</p>
     <div class="tombs" role="list">
-      <div class="tomb" role="listitem"><small>Core cash revenue</small><b>+90%</b><span>$438K → $835K, year over year</span></div>
-      <div class="tomb" role="listitem"><small>Treasury book</small><b>$193MM+</b><span>Deposits +12% (+$20.5MM)</span></div>
-      <div class="tomb inv" role="listitem"><small>Seattle lending</small><b>$45MM+</b><span>Credit originated with Chase lending teams</span></div>
+      <div class="tomb" role="listitem"><small>Core cash revenue</small><b><span aria-hidden="true" data-to="90" data-pre="+" data-suf="%">+90%</span><span class="sr">+90%</span></b><span>$438K to $835K, year over year</span></div>
+      <div class="tomb" role="listitem"><small>Treasury book</small><b><span aria-hidden="true" data-to="193" data-pre="$" data-suf="MM+">$193MM+</span><span class="sr">$193MM+</span></b><span>Deposits +12% (+$20.5MM)</span></div>
+      <div class="tomb inv" role="listitem"><small>Seattle lending</small><b><span aria-hidden="true" data-to="45" data-pre="$" data-suf="MM+">$45MM+</span><span class="sr">$45MM+</span></b><span>Credit originated with Chase lending teams</span></div>
       <div class="tomb" role="listitem"><small>Client satisfaction</small><b>5/5</b><span>CB Outstanding Banker recognition</span></div>
     </div>
   </section>
 
-  <section id="experience">
-    <h2>Experience</h2>
-    <div class="row">
-      <div class="when">Aug 2025 — Now</div>
-      <div class="what">
-        <h3>Corporate Banker</h3>
-        <p class="org">J.P. Morgan · Commercial Real Estate · Seattle</p>
+  <section id="experience" class="wrap split">
+    <h2 class="wide">Experience</h2>
+    <div class="rows">
+      <div class="row">
+        <div class="head"><h3>Corporate Banker</h3><span class="when">Aug 2025 to now</span></div>
+        <p class="org">J.P. Morgan, Commercial Real Estate, Seattle</p>
         <ul>
-          <li>Grew core cash revenue <b>90% year over year ($438K → $835K)</b> and deposits <b>12% (+$20.5MM)</b> across a $193MM+ treasury portfolio.</li>
+          <li>Grew core cash revenue <b>90% year over year ($438K to $835K)</b> and deposits <b>12% (+$20.5MM)</b> across a $193MM+ treasury portfolio.</li>
           <li>Generated <b>$20MM in deposits</b> from 2 M&amp;A transactions and partnered with Chase lending teams to secure <b>$45MM+ in Seattle lending</b>.</li>
           <li>Earned perfect <b>5/5 client satisfaction</b> scores and CB Outstanding Banker recognition, coordinating global teams on complex syndications.</li>
         </ul>
       </div>
-    </div>
-    <div class="row">
-      <div class="when">Jul 2023 — Jul 2025</div>
-      <div class="what">
-        <h3>Corporate Analyst</h3>
-        <p class="org">J.P. Morgan · Payments, HR and Strategy</p>
+      <div class="row">
+        <div class="head"><h3>Corporate Analyst</h3><span class="when">Jul 2023 to Jul 2025</span></div>
+        <p class="org">J.P. Morgan, Payments, HR and Strategy</p>
         <ul>
           <li>Built the frameworks, dashboards and reporting senior leadership used to prioritize and resource projects.</li>
           <li>Automated reporting and governance workflows in Alteryx, Qlik, Tableau, PEGA and Signavio, <b>saving 480+ hours a year</b>.</li>
           <li>Ran testing, intake and prioritization on key initiatives, cutting downtime and shortening escalations.</li>
         </ul>
       </div>
-    </div>
-    <div class="row">
-      <div class="when">Apr — Oct 2021</div>
-      <div class="what">
-        <h3>Accountant</h3>
-        <p class="org">Accusoft · Tampa</p>
+      <div class="row">
+        <div class="head"><h3>Accountant</h3><span class="when">Apr to Oct 2021</span></div>
+        <p class="org">Accusoft, Tampa</p>
         <ul><li>Ran AR/AP cycles and month-end reconciliations; supported the annual budget and policy reviews presented to the CFO.</li></ul>
       </div>
-    </div>
-    <div class="row">
-      <div class="when">2020 — 2021</div>
-      <div class="what">
-        <h3>Inventory Manager &amp; Medical Assistant</h3>
+      <div class="row">
+        <div class="head"><h3>Inventory Manager &amp; Medical Assistant</h3><span class="when">2020 to 2021</span></div>
         <p class="org">Care Cardiology &amp; Vein Center</p>
         <ul><li>Built the practice's surgical inventory system and rebuilt procedure billing, <b>cutting turnaround 50%+</b>.</li></ul>
       </div>
-    </div>
-    <div class="row">
-      <div class="when">2020 — 2021</div>
-      <div class="what">
-        <h3>Marketing Director &amp; Consultant</h3>
+      <div class="row">
+        <div class="head"><h3>Marketing Director &amp; Consultant</h3><span class="when">2020 to 2021</span></div>
         <p class="org">HEXA Consulting Junior Enterprise</p>
         <ul><li>Lifted brand awareness and client engagement <b>34%</b>; managed 10+ pro-bono consulting projects for Tampa Bay small businesses.</li></ul>
       </div>
     </div>
   </section>
 
-  <section id="research">
-    <h2>Research &amp; publications</h2>
-    <div class="row">
-      <div class="when">4 years</div>
-      <div class="what">
-        <h3>Lab Coordinator, EcoFem Lab</h3>
+  <section id="research" class="wrap split">
+    <h2 class="wide">Research</h2>
+    <div class="rows">
+      <div class="row">
+        <div class="head"><h3>Lab Coordinator, EcoFem Lab</h3><span class="when">4 years</span></div>
         <p class="org">USF St. Petersburg</p>
         <ul><li>Studied the socio-economic cost of harmful algal blooms on Southwest Florida's coastal communities, tourism and fisheries; ran IRB and grant submissions.</li></ul>
       </div>
-    </div>
-    <div class="row">
-      <div class="when">2020</div>
-      <div class="what">
-        <h3>Research Assistant, ABCD Research Team</h3>
+      <div class="row">
+        <div class="head"><h3>Research Assistant, ABCD Research Team</h3><span class="when">2020</span></div>
         <p class="org">Morsani College of Medicine</p>
         <ul><li>Researched chronic disease among the uninsured of Tampa Bay with local free clinics.</li></ul>
       </div>
-    </div>
-    <div class="row">
-      <div class="when">Published</div>
-      <div class="what">
-        <ul class="pubs">
+      <div class="row">
+        <div class="head"><h3>Publications</h3></div>
+        <ul class="pubs" style="margin-top:12px">
           <li>Le, D., Bollineni, N., et al. (2023). <cite>Lung Disease Prevalence, Risk Factors, and Screening Among the Uninsured of Tampa Bay.</cite> <a href="https://doi.org/10.1164/ajrccm-conference.2023.207.1_MeetingAbstracts.A4870" rel="noopener">AJRCCM</a>.</li>
           <li>O'Leary, H., Gantzert, T., Mann, A., et al. (2024). <cite>Citation as representation: gendered academic citation politics persist in environmental studies publications.</cite> <a href="https://doi.org/10.1007/s13412-024-00928-y" rel="noopener">J Environ Stud Sci</a>.</li>
           <li>O'Leary, H., Bollineni, N., et al. (2023). <cite>Coral Restoration Viewed through Tweets and Photo Analysis.</cite> USF St. Petersburg Spring Research Conference.</li>
@@ -253,37 +331,102 @@ footer { margin-top: 72px; border-top: 2px solid var(--ink); padding-top: 16px; 
     </div>
   </section>
 
-  <section id="building">
-    <h2>Building</h2>
-    <div class="cards">
-      <div class="card"><span class="when">2026 · ongoing</span><h3>bollineni.co apps</h3><p>Browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo.</p><a class="more noprint" href="/apps">Open the apps →</a></div>
-      <div class="card"><span class="when">2024</span><h3>Project Downtown Tampa iOS</h3><p>A Swift app for volunteers to crowdsource field data on unhoused neighbors and share resources.</p><a class="more noprint" href="https://github.com/bollineni-create/projectdowntowntampa-ios" rel="noopener">Code →</a></div>
-      <div class="card"><span class="when">2023</span><h3>StudyBuddy</h3><p>Microsoft hackathon project lead: a classroom app on Azure with a GPT-4 tutor for students.</p><a class="more noprint" href="https://github.com/ammarali0416/StudyBuddy" rel="noopener">Code →</a></div>
-      <div class="card"><span class="when">Service</span><h3>Leadership</h3><p>President, Project Downtown Tampa ($23K raised). Allocated $5MM on USF's Green Energy Fund Council. State-certified HIV/AIDS counselor, BRIDGE Clinic.</p></div>
-    </div>
-  </section>
-
-  <section id="education">
-    <h2>Education &amp; credentials</h2>
-    <div class="row">
-      <div class="when">USF Honors</div>
-      <div class="what">
-        <h3>B.A. Economics, Magna Cum Laude</h3>
+  <section id="education" class="wrap split">
+    <h2 class="wide">Education</h2>
+    <div class="rows">
+      <div class="row">
+        <div class="head"><h3>B.A. Economics, Magna Cum Laude</h3><span class="when">USF Honors</span></div>
         <p class="org">University of South Florida, Judy Genshaft Honors College</p>
         <ul><li>Minors in Mathematics and Chemistry, plus the full pre-med sequence. Dean's List every term; IB Diploma.</li></ul>
       </div>
+      <div class="row">
+        <dl>
+          <dt>In progress</dt><dd>CFA Level I candidate (Feb 2027) · SIE exam (Nov 2026)</dd>
+          <dt>Technical</dt><dd>Python, R, Salesforce, Alteryx, Tableau, Qlik, financial modeling</dd>
+          <dt>Industry</dt><dd>Commercial real estate, transaction banking, multifamily and property management</dd>
+        </dl>
+      </div>
     </div>
-    <dl>
-      <dt>In progress</dt><dd>CFA Level I candidate (Feb 2027) · SIE exam (Nov 2026)</dd>
-      <dt>Technical</dt><dd>Python, R, Salesforce, Alteryx, Tableau, Qlik, financial modeling</dd>
-      <dt>Industry</dt><dd>Commercial real estate, transaction banking, multifamily and property management</dd>
-    </dl>
   </section>
 
-  <footer>
-    <span>© 2026 Naren Bollineni</span>
-    <a class="noprint" href="/apps">bollineni.co/apps</a>
-  </footer>
-</div>
+  <section id="leadership" class="wrap split">
+    <h2 class="wide">Leadership</h2>
+    <div class="rows">
+      <div class="row">
+        <ul>
+          <li>President, Project Downtown Tampa (<b>$23K raised</b>).</li>
+          <li>Allocated <b>$5MM</b> on USF's Green Energy Fund Council.</li>
+          <li>State-certified HIV/AIDS counselor, BRIDGE Clinic.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="apps" class="night">
+    <div class="wrap">
+      <div class="night-top">
+        <h2 class="wide">Apps</h2>
+        <p>Browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo.</p>
+        <a class="btn noprint" href="/apps">Open the launcher</a>
+      </div>
+      <div class="apps"><!--APP_TILES--></div>
+      <div class="also">
+        <div class="row"><h3>StudyBuddy</h3><p>Microsoft hackathon project lead: a classroom app on Azure with a GPT-4 tutor for students.</p><span class="links noprint"><span class="when">2023</span><a href="https://github.com/ammarali0416/StudyBuddy" rel="noopener">Code</a></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="contact">
+      <p>Write to me</p>
+      <a class="mailto wide" href="mailto:naren.bollineni@icloud.com">naren.bollineni@icloud.com</a>
+    </div>
+    <footer>
+      <span>© 2026 Naren Bollineni</span>
+      <nav aria-label="Elsewhere">
+        <a href="https://www.linkedin.com/in/narenbollineni/" rel="noopener">LinkedIn</a>
+        <a href="https://github.com/bollineni-create" rel="noopener">GitHub</a>
+        <a href="/apps">bollineni.co/apps</a>
+      </nav>
+    </footer>
+  </div>
+</main>
+
+<script>
+(function () {
+
+  // The bar underlines the section on screen.
+  var links = {}, current = null;
+  document.querySelectorAll('.bar nav a[href^="#"]').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var seen = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        if (current) current.classList.remove('here');
+        current = links[e.target.id]; if (current) current.classList.add('here');
+      });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    document.querySelectorAll('main section[id], #top').forEach(function (s) { seen.observe(s); });
+
+    // The record figures count up once, the first time the tombstones come into view.
+    var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var tombs = document.querySelector('.tombs');
+    if (!still && tombs) {
+      var figures = [].slice.call(tombs.querySelectorAll('[data-to]'));
+      var run = new IntersectionObserver(function (entries) {
+        if (!entries[0].isIntersecting) return;
+        run.disconnect();
+        var t0 = performance.now() + 350, dur = 1200;
+        (function tick(t) {
+          var p = Math.min(1, Math.max(0, (t - t0) / dur)), e = 1 - Math.pow(1 - p, 4);
+          figures.forEach(function (f) { f.textContent = (f.dataset.pre || '') + Math.round(f.dataset.to * e) + (f.dataset.suf || ''); });
+          if (p < 1) requestAnimationFrame(tick);
+        })(performance.now());
+      }, { threshold: .35 });
+      run.observe(tombs);
+    }
+  }
+})();
+</script>
 </body>
 </html>

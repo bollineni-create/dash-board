@@ -3,9 +3,10 @@
 bollineni.co's front page is Naren's resume (`site/index.html`), shared from LinkedIn only and kept out of search engines (noindex meta tag plus an `X-Robots-Tag` header in `vercel.json`). The console-style app launcher lives at https://bollineni.co/apps (`site/apps/index.html`); old links like `bollineni.co/#gridline` forward to `/apps#gridline`.
 
 - `apps.json`: the list of apps on the shelf.
-- `site/index.html`: the resume (front page).
+- `site/index.html`: the resume (front page). Its Apps section shows a tile for every app in `apps.json`, in the app's own colours; the build writes the tiles in.
+- `site/fonts/archivo.woff2`: the resume's typeface (Archivo, SIL Open Font License), served from the site so the page makes no outside font request.
 - `site/apps/index.html`: the launcher page.
-- `build.mjs`: pulls each app from GitHub into `public/<id>/` and writes the shelf into the page.
+- `build.mjs`: pulls each app from GitHub into `public/<id>/` and writes the shelf into the launcher and the app tiles into the resume.
 - `api/relay.js`: the server relay that adds API keys to an app's requests.
 - `vercel.json`: Vercel config. It runs `node build.mjs` on every deploy, and sets the security headers and caching.
 
@@ -27,7 +28,7 @@ Vercel has to be connected to this repo (Project → Settings → Git) for a pus
 
 ## Adding an app
 
-Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, the swipe order, the switcher dots and the app's address automatically.
+Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, the swipe order, the switcher dots and the app's address automatically. The resume's Apps section gets a tile for it too.
 
 ```json
 {
@@ -48,7 +49,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not `api`, `icons` or `legal`. |
+| `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not `api`, `apps`, `fonts`, `icons` or `legal`. |
 | `repo` | A public git URL. The site follows the app's default branch: see [Keeping apps up to date](#keeping-apps-up-to-date). |
 | `icon` | Path inside the app's repo. |
 | `tint`, `wash` | The accent colour and the dark background tint shown while the app is selected. |
