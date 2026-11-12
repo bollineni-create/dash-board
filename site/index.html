@@ -7,8 +7,7 @@
 <meta name="description" content="Corporate banker at J.P. Morgan in Seattle. Economist by training, researcher by habit, builder on the side.">
 <!-- Shared from LinkedIn only: kept out of search engines (vercel.json also sends X-Robots-Tag). -->
 <meta name="robots" content="noindex, nofollow, noarchive">
-<meta name="theme-color" content="#F5F1E8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#101311" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -35,391 +34,253 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700;800&display=swap">
 <style>
-:root {
-  --paper: #F5F1E8; --card: #FBF9F4; --ink: #15181A; --soft: #4A4F52; --faint: #8A8E8C;
-  --rule: #DDD6C7; --accent: #1F5A44; --accent-soft: #E3ECE6;
-  --serif: "Fraunces", Georgia, "Times New Roman", serif;
-  --sans: "Inter Tight", -apple-system, "Segoe UI", system-ui, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
-  color-scheme: light dark;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --paper: #101311; --card: #161A18; --ink: #ECEAE3; --soft: #B2B5AF; --faint: #7D817C;
-    --rule: #2A2F2C; --accent: #7CC4A2; --accent-soft: #1B2A23; }
-}
+/* Swiss Tombstone: white page, black type, one red accent, deal-tombstone stat boxes. */
+:root { --ink: #111; --soft: #333; --faint: #595959; --paper: #fff; --red: #D62E1F; --sans: "Inter Tight", -apple-system, "Helvetica Neue", Arial, sans-serif; }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.6 var(--sans);
-  -webkit-font-smoothing: antialiased; overflow-wrap: anywhere; }
-a { color: inherit; text-decoration-color: var(--rule); text-underline-offset: 3px; }
-a:hover { text-decoration-color: var(--accent); color: var(--accent); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 var(--sans); -webkit-font-smoothing: antialiased; overflow-wrap: anywhere; }
+a { color: var(--ink); text-underline-offset: 3px; }
+a:hover { color: var(--red); }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+.page { max-width: 1280px; margin: 0 auto;
+  padding: calc(32px + env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) 72px max(32px, env(safe-area-inset-left)); }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px;
+  border-bottom: 2px solid var(--ink); padding-bottom: 14px; font-size: 14px; }
+.top b { font-weight: 700; }
+.top nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.top nav a { text-decoration: none; padding: 10px 0; }
+.top nav a.red { color: var(--red); }
+h1 { margin: 56px 0 40px; font-size: clamp(64px, 11vw, 148px); font-weight: 800; line-height: .9; letter-spacing: -.05em; }
+h1 span { color: var(--red); }
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; }
+.role { grid-column: span 4; margin: 0; font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; line-height: 1.6; }
+.lede { grid-column: span 8; margin: 0; font-size: clamp(22px, 2.4vw, 28px); line-height: 1.3; font-weight: 500; letter-spacing: -.01em; }
+.actions { grid-column: 5 / span 8; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border: 2px solid var(--ink); font: 700 14px/1 var(--sans);
+  text-decoration: none; background: var(--paper); color: var(--ink); cursor: pointer; }
+.btn.solid { background: var(--ink); color: var(--paper); }
+.btn:hover { background: var(--red); border-color: var(--red); color: var(--paper); }
+section { margin-top: 72px; scroll-margin-top: 24px; }
+h2 { margin: 0 0 14px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--red); }
+.tombs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.tomb { border: 2px solid var(--ink); padding: 22px 20px; min-height: 190px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+.tomb.inv { background: var(--ink); color: var(--paper); }
+.tomb small { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.tomb b { white-space: nowrap; font-size: clamp(34px, 3.4vw, 50px); font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.tomb span { font-size: 13.5px; color: var(--faint); }
+.tomb.inv span { color: #CFCFCF; }
+.row { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; padding: 22px 0; border-top: 1px solid var(--ink); }
+.row:first-of-type { border-top-width: 2px; }
+.row .when { grid-column: span 3; font-size: 15px; padding-top: 6px; }
+.row .what { grid-column: span 9; }
+h3 { margin: 0; font-size: clamp(22px, 2.3vw, 30px); font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.org { margin: 4px 0 10px; color: var(--faint); font-size: 15px; }
+ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+li { position: relative; padding-left: 20px; color: var(--soft); }
+li::before { content: ""; position: absolute; left: 0; top: .72em; width: 10px; height: 2px; background: var(--red); }
+li b { color: var(--ink); }
+.pubs li { padding-left: 0; } .pubs li::before { display: none; }
+.pubs cite { font-style: normal; font-weight: 700; color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.card { border: 2px solid var(--ink); padding: 22px; display: flex; flex-direction: column; gap: 8px; }
+.card .when { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+.card h3 { font-size: 22px; }
+.card p { margin: 0; color: var(--soft); font-size: 15.5px; }
+.card a.more { margin-top: auto; padding-top: 8px; font-weight: 700; font-size: 14px; color: var(--red); text-decoration: none; }
+dl { margin: 22px 0 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px 24px; }
+dt { grid-column: span 3; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; padding-top: 3px; }
+dd { grid-column: span 9; margin: 0; color: var(--soft); }
+footer { margin-top: 72px; border-top: 2px solid var(--ink); padding-top: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; }
 
-.page { max-width: 1120px; margin: 0 auto;
-  padding: calc(48px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 64px max(24px, env(safe-area-inset-left));
-  display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 72px; }
-
-/* Left rail: who, how to reach, where to jump. Sticks on wide screens. */
-.rail { position: sticky; top: 48px; align-self: start; }
-.mark { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: var(--paper);
-  display: grid; place-items: center; font: 600 18px/1 var(--serif); letter-spacing: .02em; }
-h1 { font: 600 clamp(40px, 5.4vw, 56px)/1.02 var(--serif); letter-spacing: -.02em; margin: 22px 0 14px; }
-.role { font-size: 17px; color: var(--soft); margin: 0 0 6px; }
-.where { font: 400 13px/1.5 var(--mono); color: var(--faint); margin: 0 0 26px; }
-.links { list-style: none; padding: 0; margin: 0 0 28px; display: grid; gap: 8px; font-size: 15px; }
-.links a { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
-.links svg { width: 16px; height: 16px; flex: none; color: var(--accent); }
-.btn { display: inline-flex; align-items: center; gap: 8px; font: 500 14px/1 var(--sans); color: var(--paper);
-  background: var(--ink); border: 0; border-radius: 999px; padding: 12px 18px; cursor: pointer; }
-.btn:hover { background: var(--accent); color: var(--paper); }
-.toc { list-style: none; padding: 0; margin: 34px 0 0; border-top: 1px solid var(--rule); }
-.toc a { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--rule);
-  font: 400 13px/1.3 var(--mono); letter-spacing: .02em; text-decoration: none; color: var(--soft); }
-.toc a span { color: var(--faint); }
-.toc a:hover, .toc a.on { color: var(--accent); }
-
-/* Main column */
-.lede { font: 400 clamp(22px, 2.6vw, 28px)/1.4 var(--serif); letter-spacing: -.01em; margin: 6px 0 36px; max-width: 34ch; }
-.lede em { font-style: italic; color: var(--accent); }
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); margin-bottom: 64px; }
-.stat { padding: 18px 16px 18px 0; }
-.stat + .stat { padding-left: 16px; border-left: 1px solid var(--rule); }
-.stat b { display: block; font: 500 clamp(24px, 2.8vw, 32px)/1.1 var(--mono); letter-spacing: -.03em; color: var(--accent); }
-.stat span { display: block; font-size: 13px; line-height: 1.4; color: var(--soft); margin-top: 6px; }
-
-section { margin-bottom: 64px; scroll-margin-top: 32px; }
-h2 { display: flex; align-items: baseline; gap: 14px; font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
-  color: var(--faint); margin: 0 0 22px; }
-h2::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
-h2 i { font-style: normal; color: var(--accent); }
-
-.item { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 24px; padding: 20px 0; border-top: 1px solid var(--rule); }
-.item:first-of-type { border-top: 0; padding-top: 4px; }
-.when { font: 400 12.5px/1.6 var(--mono); color: var(--faint); padding-top: 3px; }
-h3 { font: 600 19px/1.3 var(--serif); margin: 0; letter-spacing: -.005em; }
-.org { color: var(--soft); font-size: 15px; margin: 2px 0 10px; }
-ul.pts { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
-ul.pts li { position: relative; padding-left: 18px; color: var(--soft); font-size: 15.5px; }
-ul.pts li::before { content: ""; position: absolute; left: 2px; top: .72em; width: 7px; height: 1px; background: var(--accent); }
-ul.pts b { color: var(--ink); font-weight: 600; }
-.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.tag { font: 400 12px/1 var(--mono); color: var(--soft); background: var(--accent-soft); border-radius: 4px; padding: 6px 8px; }
-
-.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 20px; }
-.card h3 { font-size: 17px; }
-.card p { color: var(--soft); font-size: 14.5px; margin: 8px 0 0; }
-.card .when { padding: 0; margin-bottom: 8px; }
-.card a.more { display: inline-block; margin-top: 12px; font: 500 13px/1 var(--mono); color: var(--accent); text-decoration: none; }
-
-ol.pubs { list-style: none; counter-reset: p; padding: 0; margin: 0; }
-ol.pubs li { counter-increment: p; display: grid; grid-template-columns: 36px minmax(0, 1fr); padding: 14px 0; border-top: 1px solid var(--rule); font-size: 15px; color: var(--soft); }
-ol.pubs li:first-child { border-top: 0; padding-top: 4px; }
-ol.pubs li::before { content: counter(p, decimal-leading-zero); font: 400 12.5px/1.9 var(--mono); color: var(--faint); }
-ol.pubs cite { font-style: normal; color: var(--ink); font-weight: 500; }
-
-dl.skills { margin: 0; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px 24px; font-size: 15px; }
-dl.skills dt { font: 400 12.5px/1.8 var(--mono); color: var(--faint); }
-dl.skills dd { margin: 0; color: var(--soft); }
-
-footer { border-top: 1px solid var(--ink); padding-top: 22px; display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between;
-  font: 400 12.5px/1.5 var(--mono); color: var(--faint); }
-
-/* Tablet and the unfolded iPhone Duo: rail on top, still roomy. */
-@media (max-width: 920px) {
-  .page { grid-template-columns: minmax(0, 1fr); gap: 40px; padding-top: calc(32px + env(safe-area-inset-top)); }
-  .rail { position: static; }
-  .toc { display: none; }
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stat:nth-child(3) { padding-left: 0; border-left: 0; }
-  .stat:nth-child(n+3) { border-top: 1px solid var(--rule); }
+/* Tablet and the unfolded iPhone Duo */
+@media (max-width: 960px) {
+  .tombs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .role, .lede, .actions { grid-column: 1 / -1; }
 }
-/* Phones and the folded Duo (~380px). */
-@media (max-width: 560px) {
-  body { font-size: 15px; }
+/* Phones and the folded Duo (~380px) */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
   .page { padding-left: max(18px, env(safe-area-inset-left)); padding-right: max(18px, env(safe-area-inset-right)); }
-  .item, dl.skills { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .item { padding: 18px 0; }
-  .grid2 { grid-template-columns: minmax(0, 1fr); }
-  .stat { padding-right: 10px; } .stat + .stat { padding-left: 12px; }
-  .stat:nth-child(3) { padding-left: 0; }
-  ul.pts li { font-size: 15px; }
+  h1 { margin: 36px 0 28px; }
+  .grid, .row, dl { gap: 10px; }
+  .row .when, .row .what, dt, dd { grid-column: 1 / -1; }
+  .row .when { padding-top: 0; }
+  .tombs { gap: 10px; } .tomb { min-height: 150px; padding: 16px 14px; } .tomb b { font-size: clamp(26px, 8vw, 34px); }
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  section { margin-top: 56px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-
-/* "Save as PDF": a clean, ink-only printout. */
+/* Save as PDF: compact, ink-only */
 @media print {
-  :root { --paper: #fff; --card: #fff; --ink: #000; --soft: #222; --faint: #555; --rule: #ccc; --accent: #1F5A44; --accent-soft: #fff; }
-  @page { margin: 14mm 14mm; }
-  body { font-size: 10.5pt; line-height: 1.45; }
-  .page { display: block; padding: 0; max-width: none; }
-  .rail { position: static; display: grid; grid-template-columns: 1fr auto; align-items: end; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 14px; }
-  .mark, .btn, .toc, .lede, .stats, .noprint { display: none !important; }
-  h1 { font-size: 24pt; margin: 0 0 4px; grid-column: 1; }
-  .role { grid-column: 1; margin: 0; font-size: 11pt; } .where { grid-column: 1; margin: 0; }
-  .links { grid-column: 2; grid-row: 1 / span 3; margin: 0; gap: 2px; font-size: 9.5pt; text-align: right; }
-  .links svg { display: none; }
-  section { margin-bottom: 14px; break-inside: auto; }
-  h2 { margin-bottom: 6px; color: #000; }
-  .item { grid-template-columns: 105px 1fr; gap: 12px; padding: 6px 0; break-inside: avoid; border: 0; }
-  ul.pts { gap: 2px; } ul.pts li { font-size: 10pt; }
-  .tags { display: none; }
-  .grid2 { grid-template-columns: 1fr 1fr; gap: 8px; } .card { padding: 8px; border: 0; } .card p { font-size: 9.5pt; }
-  ol.pubs li { padding: 3px 0; font-size: 9.5pt; border: 0; }
-  dl.skills { grid-template-columns: 105px 1fr; gap: 3px 12px; font-size: 10pt; }
-  footer { display: none; }
+  @page { margin: 13mm; }
+  body { font-size: 10pt; line-height: 1.4; }
+  .page { padding: 0; max-width: none; }
+  .top nav, .actions, .noprint, footer { display: none !important; }
+  h1 { font-size: 30pt; margin: 10px 0 8px; }
+  .lede { font-size: 12pt; }
+  section { margin-top: 14px; break-inside: auto; }
+  .tombs { gap: 6px; } .tomb { min-height: 0; padding: 8px; } .tomb b { font-size: 20pt; }
+  .tomb.inv { background: #fff; color: #000; } .tomb.inv span { color: #333; }
+  .row { padding: 6px 0; break-inside: avoid; }
+  h3 { font-size: 12pt; } .org { margin: 0 0 3px; font-size: 9.5pt; }
+  ul { gap: 2px; } li { font-size: 9.5pt; }
+  .cards { gap: 6px; } .card { padding: 8px; }
   a { text-decoration: none; }
 }
 </style>
 </head>
 <body>
 <div class="page">
+  <header class="top">
+    <b>bollineni.co</b>
+    <nav aria-label="Sections">
+      <a href="#record">Record</a>
+      <a href="#experience">Experience</a>
+      <a href="#research">Research</a>
+      <a href="#building">Building</a>
+      <a class="red" href="mailto:naren.bollineni@icloud.com">Contact</a>
+    </nav>
+  </header>
 
-  <aside class="rail">
-    <div class="mark" aria-hidden="true">NB</div>
-    <h1>Naren Bollineni</h1>
-    <p class="role">Corporate Banker, J.P. Morgan</p>
-    <p class="where">Seattle, WA · Economics, USF Honors</p>
-    <ul class="links">
-      <li><a href="mailto:naren.bollineni@icloud.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>naren.bollineni@icloud.com</a></li>
-      <li><a href="https://www.linkedin.com/in/narenbollineni/" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.75h4v11H3v-11Zm6.5 0h3.8v1.5h.06c.53-1 1.83-2.06 3.77-2.06 4.03 0 4.77 2.65 4.77 6.1v5.46h-4v-4.84c0-1.16-.02-2.64-1.61-2.64-1.61 0-1.86 1.26-1.86 2.56v4.92h-4v-11Z"/></svg>linkedin.com/in/narenbollineni</a></li>
-      <li><a href="https://github.com/bollineni-create" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg>github.com/bollineni-create</a></li>
-    </ul>
-    <button class="btn" type="button" onclick="window.print()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>
-      Save as PDF
-    </button>
-    <ol class="toc" aria-label="Sections">
-      <li><a href="#experience">Experience <span>01</span></a></li>
-      <li><a href="#research">Research <span>02</span></a></li>
-      <li><a href="#writing">Publications <span>03</span></a></li>
-      <li><a href="#building">Building <span>04</span></a></li>
-      <li><a href="#leadership">Leadership <span>05</span></a></li>
-      <li><a href="#education">Education <span>06</span></a></li>
-    </ol>
-  </aside>
+  <h1>Naren<br>Bollineni<span>.</span></h1>
 
-  <main>
-    <p class="lede">I help commercial real estate clients move and grow their money. Before that I automated how J.P. Morgan reports on itself, and before that I studied economics, ran research on <em>health access and coastal economies</em>, and counseled patients at a free clinic.</p>
-
-    <div class="stats" role="list">
-      <div class="stat" role="listitem"><b>+90%</b><span>YoY core cash revenue on my treasury book</span></div>
-      <div class="stat" role="listitem"><b>$193MM+</b><span>treasury portfolio covered</span></div>
-      <div class="stat" role="listitem"><b>15+</b><span>M&amp;A and credit facility deals executed</span></div>
-      <div class="stat" role="listitem"><b>480+</b><span>hours a year saved through automation</span></div>
+  <div class="grid">
+    <p class="role">Corporate Banker<br>J.P. Morgan · Seattle<br>Economics, USF Honors</p>
+    <p class="lede">I help commercial real estate clients move and grow their money. Economist by training, researcher by habit, builder on the side.</p>
+    <div class="actions">
+      <a class="btn solid" href="mailto:naren.bollineni@icloud.com">Email me</a>
+      <a class="btn" href="https://www.linkedin.com/in/narenbollineni/" rel="noopener">LinkedIn</a>
+      <a class="btn" href="https://github.com/bollineni-create" rel="noopener">GitHub</a>
+      <button class="btn" type="button" onclick="window.print()">Save as PDF</button>
     </div>
+  </div>
 
-    <section id="experience">
-      <h2><i>01</i> Experience</h2>
+  <section id="record">
+    <h2>Record</h2>
+    <div class="tombs" role="list">
+      <div class="tomb" role="listitem"><small>Core cash revenue</small><b>+90%</b><span>$438K → $835K, year over year</span></div>
+      <div class="tomb" role="listitem"><small>Treasury book</small><b>$193MM+</b><span>Deposits +12% (+$20.5MM)</span></div>
+      <div class="tomb inv" role="listitem"><small>Transactions led</small><b>15+</b><span>M&amp;A and credit facilities, $750MM+ in deal volume</span></div>
+      <div class="tomb" role="listitem"><small>Hours automated</small><b>480+</b><span>per year</span></div>
+    </div>
+  </section>
 
-      <div class="item">
-        <div class="when">Aug 2024 – Now</div>
-        <div>
-          <h3>Corporate Banker</h3>
-          <p class="org">J.P. Morgan · Commercial Real Estate · Seattle</p>
-          <ul class="pts">
-            <li>Grew core cash revenue <b>90% year over year ($438K → $835K)</b> and deposits <b>12% (+$20.5MM)</b> across a $193MM+ treasury portfolio.</li>
-            <li>Led execution on <b>15+ M&amp;A transactions and credit facility underwritings</b> for multinational clients, tied to $750MM+ in revenue.</li>
-            <li>Earned perfect <b>5/5 client satisfaction</b> scores and CB Outstanding Banker recognition, coordinating global teams on complex syndications.</li>
-          </ul>
-          <div class="tags"><span class="tag">Treasury</span><span class="tag">Deal execution</span><span class="tag">Client coverage</span></div>
-        </div>
+  <section id="experience">
+    <h2>Experience</h2>
+    <div class="row">
+      <div class="when">Aug 2024 — Now</div>
+      <div class="what">
+        <h3>Corporate Banker</h3>
+        <p class="org">J.P. Morgan · Commercial Real Estate · Seattle</p>
+        <ul>
+          <li>Grew core cash revenue <b>90% year over year ($438K → $835K)</b> and deposits <b>12% (+$20.5MM)</b> across a $193MM+ treasury portfolio.</li>
+          <li>Led execution on <b>15+ M&amp;A transactions and credit facility underwritings</b> for multinational clients, totaling $750MM+ in deal volume.</li>
+          <li>Earned perfect <b>5/5 client satisfaction</b> scores and CB Outstanding Banker recognition, coordinating global teams on complex syndications.</li>
+        </ul>
       </div>
+    </div>
+    <div class="row">
+      <div class="when">Jun 2022 — Jul 2024</div>
+      <div class="what">
+        <h3>Corporate Analyst</h3>
+        <p class="org">J.P. Morgan · Payments, HR and Strategy</p>
+        <ul>
+          <li>Built the frameworks, dashboards and reporting senior leadership used to prioritize and resource projects.</li>
+          <li>Automated reporting and governance workflows in Alteryx, Qlik, Tableau, PEGA and Signavio, <b>saving 480+ hours a year</b>.</li>
+          <li>Ran testing, intake and prioritization on key initiatives, cutting downtime and shortening escalations.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="row">
+      <div class="when">Apr — Oct 2021</div>
+      <div class="what">
+        <h3>Accountant</h3>
+        <p class="org">Accusoft · Tampa</p>
+        <ul><li>Ran AR/AP cycles and month-end reconciliations; supported the annual budget and policy reviews presented to the CFO.</li></ul>
+      </div>
+    </div>
+    <div class="row">
+      <div class="when">2020 — 2021</div>
+      <div class="what">
+        <h3>Inventory Manager &amp; Medical Assistant</h3>
+        <p class="org">Care Cardiology &amp; Vein Center</p>
+        <ul><li>Built the practice's surgical inventory system and rebuilt procedure billing, <b>cutting turnaround 50%+</b>.</li></ul>
+      </div>
+    </div>
+    <div class="row">
+      <div class="when">2020 — 2021</div>
+      <div class="what">
+        <h3>Marketing Director &amp; Consultant</h3>
+        <p class="org">HEXA Consulting Junior Enterprise</p>
+        <ul><li>Lifted brand awareness and client engagement <b>34%</b>; managed 10+ pro-bono consulting projects for Tampa Bay small businesses.</li></ul>
+      </div>
+    </div>
+  </section>
 
-      <div class="item">
-        <div class="when">Jun 2022 – Jul 2024</div>
-        <div>
-          <h3>Corporate Analyst</h3>
-          <p class="org">J.P. Morgan · Payments, HR and Strategy</p>
-          <ul class="pts">
-            <li>Built the frameworks, dashboards and reporting senior leadership used to prioritize and resource projects.</li>
-            <li>Automated reporting and governance workflows in Alteryx, Qlik, Tableau, PEGA and Signavio, <b>saving 480+ hours a year</b>.</li>
-            <li>Ran testing, intake and prioritization on key initiatives, cutting downtime and shortening escalations.</li>
-          </ul>
-          <div class="tags"><span class="tag">Alteryx</span><span class="tag">Tableau</span><span class="tag">Qlik</span><span class="tag">PEGA</span><span class="tag">Signavio</span></div>
-        </div>
+  <section id="research">
+    <h2>Research &amp; publications</h2>
+    <div class="row">
+      <div class="when">2019 — 2023</div>
+      <div class="what">
+        <h3>Lab Coordinator, EcoFem Lab</h3>
+        <p class="org">USF St. Petersburg</p>
+        <ul><li>Studied the socio-economic cost of harmful algal blooms on Southwest Florida's coastal communities, tourism and fisheries; ran IRB and grant submissions.</li></ul>
       </div>
+    </div>
+    <div class="row">
+      <div class="when">2020</div>
+      <div class="what">
+        <h3>Research Assistant, ABCD Research Team</h3>
+        <p class="org">Morsani College of Medicine</p>
+        <ul><li>Researched chronic disease among the uninsured of Tampa Bay with local free clinics.</li></ul>
+      </div>
+    </div>
+    <div class="row">
+      <div class="when">Published</div>
+      <div class="what">
+        <ul class="pubs">
+          <li>Le, D., Bollineni, N., et al. (2023). <cite>Lung Disease Prevalence, Risk Factors, and Screening Among the Uninsured of Tampa Bay.</cite> <a href="https://doi.org/10.1164/ajrccm-conference.2023.207.1_MeetingAbstracts.A4870" rel="noopener">AJRCCM</a>.</li>
+          <li>O'Leary, H., Gantzert, T., Mann, A., et al. (2024). <cite>Citation as representation: gendered academic citation politics persist in environmental studies publications.</cite> <a href="https://doi.org/10.1007/s13412-024-00928-y" rel="noopener">J Environ Stud Sci</a>.</li>
+          <li>O'Leary, H., Bollineni, N., et al. (2023). <cite>Coral Restoration Viewed through Tweets and Photo Analysis.</cite> USF St. Petersburg Spring Research Conference.</li>
+          <li>Han, A., Muhammed, A., Bollineni, N., et al. (2022). <cite>Where to Go: University Students' Healthcare Provider of Choice.</cite> Poster, IHI Forum.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
-      <div class="item">
-        <div class="when">Apr – Oct 2021</div>
-        <div>
-          <h3>Accountant</h3>
-          <p class="org">Accusoft · Tampa</p>
-          <ul class="pts">
-            <li>Ran AR/AP cycles and month-end reconciliations; supported the annual budget and policy reviews presented to the CFO.</li>
-            <li>Administered payroll, benefits and multi-state sales tax in SAGE 500.</li>
-          </ul>
-        </div>
-      </div>
+  <section id="building">
+    <h2>Building</h2>
+    <div class="cards">
+      <div class="card"><span class="when">2026 · ongoing</span><h3>bollineni.co apps</h3><p>Browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo.</p><a class="more noprint" href="/apps">Open the apps →</a></div>
+      <div class="card"><span class="when">2024</span><h3>Project Downtown Tampa iOS</h3><p>A Swift app for volunteers to crowdsource field data on unhoused neighbors and share resources.</p><a class="more noprint" href="https://github.com/bollineni-create/projectdowntowntampa-ios" rel="noopener">Code →</a></div>
+      <div class="card"><span class="when">2023</span><h3>StudyBuddy</h3><p>Microsoft hackathon project lead: a classroom app on Azure with a GPT-4 tutor for students.</p><a class="more noprint" href="https://github.com/ammarali0416/StudyBuddy" rel="noopener">Code →</a></div>
+      <div class="card"><span class="when">Service</span><h3>Leadership</h3><p>President, Project Downtown Tampa ($23K raised). Allocated $5MM on USF's Green Energy Fund Council. State-certified HIV/AIDS counselor, BRIDGE Clinic.</p></div>
+    </div>
+  </section>
 
-      <div class="item">
-        <div class="when">Aug 2020 – Aug 2021</div>
-        <div>
-          <h3>Inventory Manager &amp; Medical Assistant</h3>
-          <p class="org">Care Cardiology &amp; Vein Center</p>
-          <ul class="pts">
-            <li>Built the practice's surgical inventory system, ending stockouts; rebuilt procedure billing and <b>cut turnaround 50%+</b>.</li>
-            <li>First point of patient contact and clinical scribe in a HIPAA-compliant setting.</li>
-          </ul>
-        </div>
+  <section id="education">
+    <h2>Education &amp; credentials</h2>
+    <div class="row">
+      <div class="when">USF Honors</div>
+      <div class="what">
+        <h3>B.A. Economics, Magna Cum Laude</h3>
+        <p class="org">University of South Florida, Judy Genshaft Honors College</p>
+        <ul><li>Minors in Mathematics and Chemistry, plus the full pre-med sequence. Dean's List every term; IB Diploma.</li></ul>
       </div>
+    </div>
+    <dl>
+      <dt>In progress</dt><dd>CFA Level I candidate (Feb 2027) · SIE exam (Nov 2026)</dd>
+      <dt>Technical</dt><dd>Python, R, Salesforce, Alteryx, Tableau, Qlik, financial modeling</dd>
+      <dt>Industry</dt><dd>Commercial real estate, transaction banking, multifamily and property management</dd>
+    </dl>
+  </section>
 
-      <div class="item">
-        <div class="when">Aug 2020 – Sep 2021</div>
-        <div>
-          <h3>Marketing Director &amp; Consultant</h3>
-          <p class="org">HEXA Consulting Junior Enterprise</p>
-          <ul class="pts">
-            <li>Lifted brand awareness and client engagement <b>34%</b>; managed 10+ pro-bono consulting projects for Tampa Bay small businesses.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="item">
-        <div class="when">Aug 2020 – May 2022</div>
-        <div>
-          <h3>Peer Financial Educator</h3>
-          <p class="org">Bull2Bull Financial Education Center, USF</p>
-          <ul class="pts">
-            <li>Coached undergraduates on budgeting, credit and student debt; created the Cash Cab outreach campaign.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section id="research">
-      <h2><i>02</i> Research</h2>
-      <div class="item">
-        <div class="when">Aug 2019 – Oct 2023</div>
-        <div>
-          <h3>Lab Coordinator</h3>
-          <p class="org">EcoFem Lab, USF St. Petersburg</p>
-          <ul class="pts">
-            <li>Studied the socio-economic cost of harmful algal blooms on Southwest Florida's coastal communities, tourism and fisheries.</li>
-            <li>Ran IRB applications and external grant proposals across concurrent projects; built a K-6 curriculum adopted by partner schools.</li>
-          </ul>
-        </div>
-      </div>
-      <div class="item">
-        <div class="when">May – Jul 2020</div>
-        <div>
-          <h3>Research Assistant</h3>
-          <p class="org">Morsani College of Medicine, ABCD Research Team</p>
-          <ul class="pts">
-            <li>Researched chronic disease and risk factors among the uninsured of Tampa Bay with local free clinics, leading to a publication in the <b>American Journal of Respiratory and Critical Care Medicine</b>.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section id="writing">
-      <h2><i>03</i> Publications &amp; talks</h2>
-      <ol class="pubs">
-        <li><span>O'Leary, H., Gantzert, T., Mann, A., et al. (2024). <cite>Citation as representation: gendered academic citation politics persist in environmental studies publications.</cite> <a href="https://doi.org/10.1007/s13412-024-00928-y" rel="noopener">J Environ Stud Sci</a>.</span></li>
-        <li><span>Le, D., Bollineni, N., Swanson, J., Mirza, A.-S., &amp; Mhaskar, R. (2023). <cite>Lung Disease Prevalence, Risk Factors, and Screening Among the Uninsured of Tampa Bay: A Free Clinic Study.</cite> <a href="https://doi.org/10.1164/ajrccm-conference.2023.207.1_MeetingAbstracts.A4870" rel="noopener">AJRCCM</a>.</span></li>
-        <li><span>O'Leary, H., Kramer, M., Howard, S., Shuff, H., Bollineni, N., &amp; Pridemore, T. (2023). <cite>Coral Restoration Viewed through Tweets and Photo Analysis.</cite> USF St. Petersburg Spring Research Conference.</span></li>
-        <li><span>Han, A., Muhammed, A., Bollineni, N., et al. (2022). <cite>Where to Go: University Students' Healthcare Provider of Choice.</cite> Poster, Institute for Healthcare Improvement Forum.</span></li>
-        <li><span>Panelist, <cite>Careers in the Finance Industry at JPMorgan Chase</cite>, HEXA Consulting, Feb 2024 · Panelist, <cite>Leveraging Social Media for Non-Profits</cite>, Tampa AMA, Feb 2024.</span></li>
-      </ol>
-    </section>
-
-    <section id="building">
-      <h2><i>04</i> Building</h2>
-      <div class="grid2">
-        <div class="card">
-          <div class="when">2026 · ongoing</div>
-          <h3>bollineni.co apps</h3>
-          <p>A handful of browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo.</p>
-          <a class="more noprint" href="/apps">Open the apps →</a>
-        </div>
-        <div class="card">
-          <div class="when">Mar – May 2024</div>
-          <h3>Project Downtown Tampa iOS</h3>
-          <p>A Swift app that lets volunteers crowdsource field data on unhoused neighbors and share resources. Designed and built end to end.</p>
-          <a class="more noprint" href="https://github.com/bollineni-create/projectdowntowntampa-ios" rel="noopener">Code →</a>
-        </div>
-        <div class="card">
-          <div class="when">Oct – Dec 2023</div>
-          <h3>StudyBuddy</h3>
-          <p>Microsoft hackathon project lead: a classroom app on Azure with a GPT-4 tutor for students and course tools for teachers.</p>
-          <a class="more noprint" href="https://github.com/ammarali0416/StudyBuddy" rel="noopener">Code →</a>
-        </div>
-        <div class="card">
-          <div class="when">Toolkit</div>
-          <h3>How I work</h3>
-          <p>Python and R for data, Salesforce for clients, financial models in Excel, and AI agents for everything repetitive.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="leadership">
-      <h2><i>05</i> Leadership &amp; service</h2>
-      <div class="item">
-        <div class="when">2018 – 2025</div>
-        <div><h3>President &amp; Volunteer</h3><p class="org">Project Downtown Tampa</p>
-          <ul class="pts"><li>Raised <b>$23K</b> for clothing and supplies for displaced neighbors; ran weekly meal service and 8 SDG education events a year.</li></ul></div>
-      </div>
-      <div class="item">
-        <div class="when">2021 – 2023</div>
-        <div><h3>Board Member</h3><p class="org">Student Green Energy Fund Council, USF</p>
-          <ul class="pts"><li>Evaluated 20+ proposals with cost–benefit and payback analysis to allocate <b>$5MM</b> against the university's Climate Action Plan.</li></ul></div>
-      </div>
-      <div class="item">
-        <div class="when">2020 – 2023</div>
-        <div><h3>HIV/AIDS Counselor</h3><p class="org">BRIDGE Clinic</p>
-          <ul class="pts"><li>State-certified counselor providing confidential testing and counseling to uninsured patients; trained incoming counselors.</li></ul></div>
-      </div>
-      <div class="item">
-        <div class="when">2020 – 2023</div>
-        <div><h3>Board Member</h3><p class="org">University Conduct Board · MSC Advisory Board</p>
-          <ul class="pts"><li>Sat on 50+ conduct hearings and led 10+ ethics workshops; advised on student-center services for a 50,000-student campus.</li></ul></div>
-      </div>
-      <div class="item">
-        <div class="when">2021 – 2022</div>
-        <div><h3>Member</h3><p class="org">Tampa Bay Chamber Collegiate Leadership Program</p>
-          <ul class="pts"><li>One of ten students chosen across three universities.</li></ul></div>
-      </div>
-    </section>
-
-    <section id="education">
-      <h2><i>06</i> Education &amp; credentials</h2>
-      <div class="item">
-        <div class="when">2019 – 2023</div>
-        <div>
-          <h3>B.A. Economics, Magna Cum Laude</h3>
-          <p class="org">University of South Florida, Judy Genshaft Honors College</p>
-          <ul class="pts">
-            <li>Minors in Mathematics and Chemistry, plus the full pre-med sequence.</li>
-            <li>Dean's List every term · Presidential, Honors College and History of Achievement scholarships · IB Diploma.</li>
-          </ul>
-        </div>
-      </div>
-      <dl class="skills">
-        <dt>In progress</dt><dd>CFA Level I candidate (Feb 2027) · SIE exam (Nov 2026)</dd>
-        <dt>Technical</dt><dd>Python, R, Salesforce CRM, Alteryx, Tableau, Qlik, financial modeling, Microsoft Office</dd>
-        <dt>Industry</dt><dd>Commercial real estate, transaction banking, multifamily and property management</dd>
-        <dt>Strengths</dt><dd>Client acquisition, relationship management, deal execution, pricing, cross-functional stakeholder work</dd>
-      </dl>
-    </section>
-
-    <footer>
-      <span>© 2026 Naren Bollineni</span>
-      <a class="noprint" href="/apps">bollineni.co/apps</a>
-    </footer>
-  </main>
+  <footer>
+    <span>© 2026 Naren Bollineni</span>
+    <a class="noprint" href="/apps">bollineni.co/apps</a>
+  </footer>
 </div>
-<script>
-  // Highlight the section in view in the side index.
-  (function () {
-    var links = [].slice.call(document.querySelectorAll('.toc a'));
-    if (!('IntersectionObserver' in window) || !links.length) return;
-    var io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id); }); });
-    }, { rootMargin: '-30% 0px -60% 0px' });
-    document.querySelectorAll('main section').forEach(function (s) { io.observe(s); });
-  })();
-</script>
 </body>
 </html>
