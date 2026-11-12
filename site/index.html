@@ -207,6 +207,8 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .tombs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; border-width: 1px; }
   .tomb { min-height: 0; padding: 7px 8px; gap: 3px; } .tomb b { font-size: 18pt; } .tomb small, .tomb > span { font-size: 8pt; }
   .tomb.inv { background: #fff; color: #000; } .tomb.inv > span { color: #333; }
+  /* Print the real figures even if the count-up is still running. */
+  .tomb b [data-to] { display: none; } .tomb b .sr { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
   .split { display: block; margin-top: 12px; }
   h2 { font-size: 12pt; letter-spacing: -.01em; } .split > h2 { position: static; padding: 0 0 4px; }
   .row { padding: 5px 0 6px; break-inside: avoid; border-top-width: .5pt !important; }
