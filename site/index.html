@@ -587,10 +587,11 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     t.addEventListener('click', function (e) {
       // Ctrl/Cmd/Shift/middle click keeps its usual meaning: the tab is a link to the app's own page.
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
-      e.preventDefault(); touched = true; select(order[i]);
+      e.preventDefault(); if (open) return; touched = true; select(order[i]);
     });
   });
   shelfEl.addEventListener('keydown', function (e) {
+    if (open) return;
     var n = order.length, i = order.indexOf(sel);
     if (e.key === 'ArrowRight') i = (i + 1) % n; else if (e.key === 'ArrowLeft') i = (i - 1 + n) % n;
     else if (e.key === 'Home') i = 0; else if (e.key === 'End') i = n - 1;
@@ -754,6 +755,14 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   // scrolling the resume). Hiding the scrollbar widens the page, so pad it by the same amount.
   function lock() { var bar = innerWidth - root.clientWidth; root.classList.add('app-open'); if (bar > 0) document.body.style.paddingRight = bar + 'px'; }
   function unlock() { root.classList.remove('app-open'); document.body.style.paddingRight = ''; }
+  // Nor may it be used: the resume is covered, but its links, tabs and buttons would still take
+  // the Tab key and a screen reader. Everything outside the window (and the rail) is switched
+  // off while an app is open. The window can't simply move out of the page: moving an iframe reloads it.
+  var behind = [];
+  for (var node = win; node !== document.body; node = node.parentNode) {
+    [].forEach.call(node.parentNode.children, function (c) { if (c !== node && c !== railEl && c.tagName !== 'SCRIPT') behind.push(c); });
+  }
+  function setBehind(off) { behind.forEach(function (c) { c.inert = off; }); }
 
   function launch(id, opts) {
     opts = opts || {};
@@ -764,7 +773,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     var reduce = reducedMQ.matches || opts.instant;
     // The browser must not jump the page about when Back closes the app: home() puts the card on screen itself.
     if (!opts.fromHistory) { try { history.scrollRestoration = 'manual'; } catch (e) {} history.pushState({ app: id }, '', '#' + id); pushed = true; }
-    lock();
+    lock(); setBehind(true);
     win.classList.add('instant');
     placeOver(); // same spot on screen, now fixed over the page
     win.classList.add('open'); win.classList.remove('preview'); win.removeAttribute('aria-hidden'); win.inert = false;
@@ -801,7 +810,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     placeOver();
     setTimeout(function () {
       win.classList.remove('open'); snap(placeCard);
-      unlock();
+      unlock(); setBehind(false);
       open = null; busy = false; pushed = false;
       try { history.scrollRestoration = 'auto'; } catch (e) {}
       tabs[order.indexOf(id)].focus({ preventScroll: true });
