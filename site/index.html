@@ -216,8 +216,11 @@ html.app-open .winbar[data-tone="dark"] { --w-ink: #fff; --w-muted: #A8A8A8; --w
 html.app-open, html.app-open body { overflow: hidden; }
 html.app-open { background: var(--app-bg, #000); }
 /* Once the app has finished opening the resume is taken out of the picture as well. iOS Safari can leave
-   a strip between the window and its toolbar; the resume showing through it would look like a tear. */
-html.app-shown body { visibility: hidden; } html.app-shown .window.open, html.app-shown .rail { visibility: visible; }
+   a strip between the window and its toolbar; the resume showing through it would look like a tear.
+   On screen only: printing with an app open still prints the resume. */
+@media screen { html.app-shown body { visibility: hidden; } html.app-shown .window.open, html.app-shown .rail { visibility: visible; } }
+/* An app that is up does not glide: when the split view comes on or goes off (unfolding the Duo), it is in its new place at once. */
+html.app-shown .window.open { transition: none; }
 /* A link straight to an app (bollineni.co/#gridline): keep the resume out of sight until the app is up. */
 html.opening { background: #000; } html.opening body { visibility: hidden; } html.opening .window.open { visibility: visible; }
 /* Unfolded iPhone Duo and other small tablets: an open app shares the screen with a rail of icons for switching. */
