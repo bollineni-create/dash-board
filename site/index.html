@@ -215,11 +215,18 @@ html.app-open .winbar[data-tone="dark"] { --w-ink: #fff; --w-muted: #A8A8A8; --w
 /* An app is open: the page behind stops scrolling, and anything past its edges takes the app's colour. */
 html.app-open, html.app-open body { overflow: hidden; }
 html.app-open { background: var(--app-bg, #000); }
+/* Once the app has finished opening the resume is taken out of the picture as well. iOS Safari can leave
+   a strip between the window and its toolbar; the resume showing through it would look like a tear.
+   On screen only: printing with an app open still prints the resume. */
+@media screen { html.app-shown body { visibility: hidden; } html.app-shown .window.open, html.app-shown .rail { visibility: visible; } }
+/* An app that is up does not glide: when the split view comes on or goes off (unfolding the Duo), it is in its new place at once. */
+html.app-shown .window.open { transition: none; }
 /* A link straight to an app (bollineni.co/#gridline): keep the resume out of sight until the app is up. */
 html.opening { background: #000; } html.opening body { visibility: hidden; } html.opening .window.open { visibility: visible; }
 /* Unfolded iPhone Duo and other small tablets: an open app shares the screen with a rail of icons for switching. */
 .rail { display: none; }
 @media (min-width: 600px) and (max-width: 760px) and (min-height: 700px) {
+  .window { --win-w: calc(100vw - 72px); --open-x: 72px; }
   html.app-open .rail { position: fixed; left: 0; top: 0; bottom: 0; z-index: 51; width: 72px; display: flex; flex-direction: column; gap: 8px; overflow: hidden auto;
     padding: calc(18px + env(safe-area-inset-top, 0px)) 0 18px; background: #000; border-right: 2px solid #fff; }
   .rail button { position: relative; flex: none; width: 100%; padding: 4px 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
@@ -692,13 +699,11 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     } catch (e) { /* another origin */ }
   }
 
-  // The size an open app gets: the screen, or on the unfolded Duo the pane beside the rail.
-  var splitMQ = matchMedia('(min-width: 600px) and (max-width: 760px) and (min-height: 700px)');
-  function view() {
-    var x = splitMQ.matches ? 72 : 0;
-    if (x) win.style.setProperty('--win-w', (innerWidth - x) + 'px'); else win.style.removeProperty('--win-w');
-    return { w: innerWidth - x, h: innerHeight, x: x };
-  }
+  // The size an open app gets: the screen, or on the unfolded Duo the pane beside the rail. CSS decides
+  // both (--win-w and --open-x in the split-view media query), and the size is read back from the window's
+  // own box. innerWidth, innerHeight and matchMedia().matches can all still hold the old answer while an
+  // iPhone Duo is being unfolded or Safari's toolbar moves, and a window placed by them ends up one step behind.
+  function view() { return { w: win.offsetWidth || innerWidth, h: win.offsetHeight || innerHeight }; }
   // How much the window shrinks to fit its slot, and how much of its bottom a short slot cuts off.
   function measure() {
     var v = view();
@@ -712,7 +717,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   // Fixed over the page, exactly where the card is: where the zoom starts from and comes back to.
   function placeOver() { var m = measure(), r = slot.getBoundingClientRect(); put('translate(' + r.left + 'px,' + r.top + 'px) scale(' + m.s + ')', m.cut); }
   // Filling the screen.
-  function placeOpen() { var v = view(); put(v.x ? 'translate(' + v.x + 'px,0px)' : 'none', 0); }
+  function placeOpen() { put('translate(var(--open-x, 0px), 0px)', 0); }
   var snap = function (fn) { win.classList.add('instant'); fn(); void win.offsetWidth; win.classList.remove('instant'); };
 
   // The name is set as wide as the one at the top of the page. One too long for its column is scaled down to fit.
@@ -786,6 +791,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     fr.el.tabIndex = 0; $('homeBtn').tabIndex = 0; $('newTab').tabIndex = 0; dots.forEach(function (d) { d.tabIndex = 0; });
     setTimeout(function () {
       win.classList.remove('instant'); busy = false;
+      if (open === id && !win.classList.contains('preview')) root.classList.add('app-shown'); // not if it is already on its way home
       var go = function () { if (open !== id) return; splash.classList.add('gone'); try { fr.el.focus(); } catch (e) {} };
       if (fr.loaded) go(); else { fr.waiters.push(go); setTimeout(go, 2500); }
     }, reduce ? 0 : DUR);
@@ -798,6 +804,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     if (!opts.fromHistory && pushed) { history.back(); return; }
     var id = open, reduce = reducedMQ.matches;
     busy = true;
+    root.classList.remove('app-shown'); // the resume is back in the picture for the flight home
     frames[id].el.tabIndex = -1; $('homeBtn').tabIndex = -1; $('newTab').tabIndex = -1; dots.forEach(function (d) { d.tabIndex = -1; });
     win.classList.add('preview'); win.setAttribute('aria-hidden', 'true'); win.inert = true;
     paintBehind(null);
@@ -898,7 +905,9 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 
   var start = location.hash.slice(1);
   select(APPS[start] ? start : order[0], { force: true });
-  if ('ResizeObserver' in window) new ResizeObserver(function () { if (!open && !busy) snap(placeCard); }).observe(slot);
+  // Keep the card in step with its slot and with the window it shows: either can change size without the
+  // browser sending a resize (unfolding the Duo, Safari's toolbar collapsing, the split view coming on).
+  if ('ResizeObserver' in window) { var ro = new ResizeObserver(function () { if (!open && !busy) snap(placeCard); }); ro.observe(slot); ro.observe(win); }
   // fonts can shift the layout once they arrive
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { fitName(); if (!open) snap(placeCard); });
   // A link straight to an app (bollineni.co/#gridline) opens it, with the resume one Back away.
