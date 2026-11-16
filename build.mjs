@@ -6,6 +6,7 @@
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { extname } from 'node:path';
+import { stampAssets } from './lib/stamp-assets.js';
 
 const OUT = 'public', SRC = '.src';
 // Folders the site already uses, and the front page's own anchors (bollineni.co/#apps): an app's id is its address and its #link.
@@ -49,6 +50,9 @@ for (const a of apps) {
   } else {
     execFileSync('git', ['clone', '--depth', '1', ...(a.branch ? ['--branch', a.branch] : []), a.repo, src], { stdio: 'inherit' });
   }
+  // The commit that was fetched. Browsers may keep an app's scripts and styles for an hour, so their
+  // addresses carry it (lib/stamp-assets.js) and change whenever the app does.
+  const version = execFileSync('git', ['-C', src, 'rev-parse', '--short=12', 'HEAD'], { encoding: 'utf8' }).trim();
   // `root` is the folder in the repo that holds the page (Ballast keeps it in public/).
   const base = a.root ? `${src}/${a.root}` : src;
   for (const p of a.files || ['index.html', 'css', 'js', 'assets']) {
@@ -100,8 +104,8 @@ for (const a of apps) {
   // Every app page wears the site's "b" icon in the browser tab, so the whole site reads as
   // one place. Installed to a home screen, an app shows its own icon instead.
   for (const f of readdirSync(dest).filter((n) => n.endsWith('.html'))) {
-    const html = readFileSync(`${dest}/${f}`, 'utf8');
-    if (!html.includes('</head>')) continue;
+    const html = stampAssets(readFileSync(`${dest}/${f}`, 'utf8'), version);
+    if (!html.includes('</head>')) { writeFileSync(`${dest}/${f}`, html); continue; }
     writeFileSync(`${dest}/${f}`, html
       .replace(/[ \t]*<link\b(?:"[^"]*"|'[^']*'|[^'">])*>[ \t]*\r?\n?/gi,
         (tag) => /\brel\s*=\s*["']?(?:shortcut icon|icon|apple-touch-icon(?:-precomposed)?|mask-icon|manifest)["'\s>]/i.test(tag) ? '' : tag)
