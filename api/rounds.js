@@ -4,6 +4,14 @@
 // upvote counts and reply trees. Without it, it reads Reddit's public Atom feeds, as the
 // Rounds Mac app does: Reddit refuses anonymous JSON requests from cloud hosts, and approves
 // client IDs case by case. Read-only: nothing posts.
+//
+// Reddit allows an address about one feed request a minute. So feed answers are kept at the
+// edge for a long time and shared by every visitor, and each answer passes Reddit's own
+// budget on (X-Reddit-Remaining, X-Reddit-Reset, and Retry-After on a 429) so the page can
+// wait its turn instead of being refused. While it waits, the page may ask for an answer
+// "only if the edge already has it" (the X-Rounds-Cached-Only header): the edge answers such a
+// request itself when it can, and when it reaches this route the answer is an empty 204 and
+// Reddit is not asked.
 import { randomUUID } from 'node:crypto';
 import { aboutThing, commentsPair, parseAtom, postsListing } from '../lib/rounds-feed.js';
 
@@ -66,21 +74,37 @@ async function reddit(path, params) {
   return r.json();
 }
 
+// What Reddit says is left of this address's request budget: how many requests, and the seconds until it refills.
+const seconds = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0 ? String(Math.ceil(Number(v))) : null);
+function budgetOf(r) {
+  const reset = seconds(r.headers.get('x-ratelimit-reset'));
+  return { remaining: seconds(r.headers.get('x-ratelimit-remaining')), reset, retryAfter: seconds(r.headers.get('retry-after')) || reset };
+}
+function sendBudget(res, budget, limited) {
+  if (!budget) return;
+  if (budget.remaining != null) res.setHeader('X-Reddit-Remaining', budget.remaining);
+  if (budget.reset != null) res.setHeader('X-Reddit-Reset', budget.reset);
+  if (limited && budget.retryAfter != null) res.setHeader('Retry-After', budget.retryAfter);
+}
+
 // A public Atom feed, used when there is no client ID. `sub` is set for subreddit feeds.
+// The answer carries Reddit's budget as `.budget`, and so does a refusal.
 async function feed(path, params, sub) {
   const r = await fetch(`https://www.reddit.com${path}?${new URLSearchParams(params)}`, {
     headers: { 'User-Agent': UA, Accept: 'application/atom+xml' }, signal: AbortSignal.timeout(12_000),
   }).catch(() => { throw refused(504, 'upstream', 'Reddit took too long to answer.'); });
+  const budget = budgetOf(r);
+  const no = (status, reason, message) => Object.assign(refused(status, reason, message), { budget });
   // A subreddit that doesn't exist redirects to the subreddit search feed.
   let landed = '';
   try { landed = new URL(r.url).pathname; } catch { /* keep '' */ }
-  if (r.status === 404 || (sub && landed.startsWith('/subreddits/search'))) throw refused(404, 'not_found', 'Reddit has no such page.');
-  if (r.status === 403) throw refused(403, sub ? 'private' : 'blocked', sub ? `Reddit refused the request (r/${sub} may be private).` : 'Reddit refused the request.');
-  if (r.status === 429) throw refused(429, 'rate_limited', 'Reddit is rate-limiting requests. Try again in a minute.');
-  if (!r.ok) throw refused(r.status, 'upstream', `Reddit returned an error (${r.status}).`);
+  if (r.status === 404 || (sub && landed.startsWith('/subreddits/search'))) throw no(404, 'not_found', 'Reddit has no such page.');
+  if (r.status === 403) throw no(403, sub ? 'private' : 'blocked', sub ? `Reddit refused the request (r/${sub} may be private).` : 'Reddit refused the request.');
+  if (r.status === 429) throw no(429, 'rate_limited', 'Reddit is rate-limiting requests. Try again in a minute.');
+  if (!r.ok) throw no(r.status, 'upstream', `Reddit returned an error (${r.status}).`);
   const parsed = parseAtom(await r.text());
-  if (!parsed) throw refused(502, 'upstream', 'Reddit sent something Rounds couldn’t read.');
-  return parsed;
+  if (!parsed) throw no(502, 'upstream', 'Reddit sent something Rounds couldn’t read.');
+  return Object.assign(parsed, { budget });
 }
 
 const SUB = /^[A-Za-z0-9_]{3,21}$/;
@@ -90,6 +114,13 @@ const AFTER = /^t3_[a-z0-9]{1,12}$/;
 const clamp = (v, lo, hi, d) => Math.min(hi, Math.max(lo, Number(v) || d));
 const LISTING = 'public, max-age=0, s-maxage=300, stale-while-revalidate=600';
 const COMMENTS = 'public, max-age=0, s-maxage=900, stale-while-revalidate=1800';
+// Feed answers are scarce, so the edge keeps them much longer: a listing is fresh for half an hour and a
+// thread's comments for six hours, and an older copy is still served at once while a new one is fetched.
+const FEED_LISTING = 'public, max-age=0, s-maxage=1800, stale-while-revalidate=86400';
+const FEED_COMMENTS = 'public, max-age=0, s-maxage=21600, stale-while-revalidate=604800';
+const FEED_ABOUT = 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800';
+// Answers with a feed, telling the page what Reddit has left for this address.
+const sendFeed = (res, f, data, cache) => { sendBudget(res, f.budget, false); return send(res, 200, data, cache); };
 
 export default async function handler(req, res) {
   const url = new URL(req.url, `https://${req.headers.host}`);
@@ -104,12 +135,18 @@ export default async function handler(req, res) {
     res.setHeader('Retry-After', '30');
     return send(res, 429, { error: 'Too many requests. Try again shortly.', reason: 'rate_limited' });
   }
+  // Reaching this route means the edge had no copy. A cached-only request stops here.
+  const cachedOnly = !CLIENT_ID && !!req.headers['x-rounds-cached-only'];
+  const notCached = () => res.status(204).setHeader('Cache-Control', 'no-store').end();
   try {
     if (route === 'top' || route === 'hot' || route === 'about') {
       const sub = q('sub');
       if (!SUB.test(sub)) return send(res, 400, { error: 'That isn’t a valid subreddit name.', reason: 'invalid' });
+      if (cachedOnly) return notCached();
       if (route === 'about') {
-        return send(res, 200, CLIENT_ID ? await reddit(`/r/${sub}/about`, {}) : aboutThing(await feed(`/r/${sub}/.rss`, { limit: '1' }, sub), sub), LISTING);
+        if (CLIENT_ID) return send(res, 200, await reddit(`/r/${sub}/about`, {}), LISTING);
+        const f = await feed(`/r/${sub}/.rss`, { limit: '1' }, sub);
+        return sendFeed(res, f, aboutThing(f, sub), FEED_ABOUT);
       }
       const params = { limit: String(clamp(q('limit'), 1, 100, 100)) };
       if (route === 'top') {
@@ -117,17 +154,21 @@ export default async function handler(req, res) {
         if (CLIENT_ID && AFTER.test(q('after'))) params.after = q('after');
       }
       if (CLIENT_ID) return send(res, 200, await reddit(`/r/${sub}/${route}`, params), LISTING);
-      return send(res, 200, postsListing(await feed(`/r/${sub}/${route}/.rss`, params, sub), sub), LISTING);
+      const f = await feed(`/r/${sub}/${route}/.rss`, params, sub);
+      return sendFeed(res, f, postsListing(f, sub), FEED_LISTING);
     }
     if (route === 'comments') {
       const id = q('id');
       if (!ID.test(id)) return send(res, 400, { error: 'That isn’t a valid thread id.', reason: 'invalid' });
+      if (cachedOnly) return notCached();
       const limit = clamp(q('limit'), 1, 500, 500);
       if (CLIENT_ID) return send(res, 200, await reddit(`/comments/${id}`, { limit: String(limit), sort: 'top' }), COMMENTS);
-      return send(res, 200, commentsPair(await feed(`/comments/${id}/.rss`, { sort: 'top', limit: String(limit) }), limit), COMMENTS);
+      const f = await feed(`/comments/${id}/.rss`, { sort: 'top', limit: String(limit) });
+      return sendFeed(res, f, commentsPair(f, limit), FEED_COMMENTS);
     }
     return send(res, 404, { error: 'Not found' });
   } catch (e) {
+    sendBudget(res, e.budget, e.status === 429);
     send(res, e.status || 500, { error: e.message, reason: e.reason || 'upstream' });
   }
 }
