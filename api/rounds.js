@@ -11,9 +11,9 @@
 // wait its turn instead of being refused. While it waits, the page may ask for an answer
 // "only if the edge already has it" (the X-Rounds-Cached-Only header): the edge answers such a
 // request itself when it can, and when it reaches this route the answer is an empty 204 and
-// Reddit is not asked.
+// Reddit is not asked. `status` says so (`cachedOnly`), and the page only asks that way when it does.
 import { randomUUID } from 'node:crypto';
-import { aboutThing, commentsPair, parseAtom, postsListing } from '../lib/rounds-feed.js';
+import { aboutThing, budgetOf, commentsPair, parseAtom, postsListing } from '../lib/rounds-feed.js';
 
 const UA = 'web:com.naren.rounds:v1.0 (by /u/rounds_app)';
 const CLIENT_ID = process.env.REDDIT_CLIENT_ID || '';
@@ -74,12 +74,6 @@ async function reddit(path, params) {
   return r.json();
 }
 
-// What Reddit says is left of this address's request budget: how many requests, and the seconds until it refills.
-const seconds = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0 ? String(Math.ceil(Number(v))) : null);
-function budgetOf(r) {
-  const reset = seconds(r.headers.get('x-ratelimit-reset'));
-  return { remaining: seconds(r.headers.get('x-ratelimit-remaining')), reset, retryAfter: seconds(r.headers.get('retry-after')) || reset };
-}
 function sendBudget(res, budget, limited) {
   if (!budget) return;
   if (budget.remaining != null) res.setHeader('X-Reddit-Remaining', budget.remaining);
@@ -128,7 +122,8 @@ export default async function handler(req, res) {
   const q = (k) => url.searchParams.get(k) || '';
   if (req.method !== 'GET') return send(res, 405, { error: 'Method not allowed' });
   // `feeds`: no client ID, so answers come from the public feeds and carry no upvote or comment counts.
-  if (route === 'status') return send(res, 200, { rounds: true, oauth: !!CLIENT_ID, feeds: !CLIENT_ID });
+  // `cachedOnly` tells the page this route answers a cached-only request without asking Reddit.
+  if (route === 'status') return send(res, 200, { rounds: true, oauth: !!CLIENT_ID, feeds: !CLIENT_ID, cachedOnly: !CLIENT_ID });
   if (!sameSite(req)) return send(res, 403, { error: 'Forbidden' });
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
   if (overLimit(ip)) {
