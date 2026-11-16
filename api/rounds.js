@@ -1,8 +1,11 @@
 // Rounds' server routes for the hosted site (/rounds/api/* is rewritten here). Browsers
-// can't read Reddit's JSON across origins, so the web version reads it through this route.
-// With REDDIT_CLIENT_ID set it uses an app-only OAuth token (oauth.reddit.com, higher
-// limits); without it, it reads the public www.reddit.com JSON. Read-only: nothing posts.
+// can't read Reddit across origins, so the web version reads it through this route.
+// With REDDIT_CLIENT_ID set it uses an app-only OAuth token (oauth.reddit.com), which gives
+// upvote counts and reply trees. Without it, it reads Reddit's public Atom feeds, as the
+// Rounds Mac app does: Reddit refuses anonymous JSON requests from cloud hosts, and approves
+// client IDs case by case. Read-only: nothing posts.
 import { randomUUID } from 'node:crypto';
+import { aboutThing, commentsPair, parseAtom, postsListing } from '../lib/rounds-feed.js';
 
 const UA = 'web:com.naren.rounds:v1.0 (by /u/rounds_app)';
 const CLIENT_ID = process.env.REDDIT_CLIENT_ID || '';
@@ -43,33 +46,41 @@ async function accessToken() {
   return token.value;
 }
 
+const refused = (status, reason, message) => Object.assign(new Error(message), { status, reason });
+
+// The OAuth API, used when REDDIT_CLIENT_ID is set.
 async function reddit(path, params) {
   const qs = new URLSearchParams({ ...params, raw_json: '1' });
-  const headers = { 'User-Agent': UA, Accept: 'application/json' };
-  let url;
-  if (CLIENT_ID) {
-    headers.Authorization = 'Bearer ' + await accessToken();
-    url = `https://oauth.reddit.com${path}?${qs}`;
-  } else {
-    url = `https://www.reddit.com${path}.json?${qs}`;
-  }
-  const r = await fetch(url, { headers, redirect: 'manual' });
-  if (r.status === 401 && CLIENT_ID) token = null;
+  const headers = { 'User-Agent': UA, Accept: 'application/json', Authorization: 'Bearer ' + await accessToken() };
+  const r = await fetch(`https://oauth.reddit.com${path}?${qs}`, { headers, redirect: 'manual' });
+  if (r.status === 401) token = null;
   if (!r.ok) {
     // Reddit redirects unknown subreddits to search, and says why a 403 happened
     // (private, quarantined, banned) in its body; pass that reason on to the app.
     const body = await r.json().catch(() => null);
     const status = r.status >= 300 && r.status < 400 ? 404 : r.status;
     const given = typeof body?.reason === 'string' && body.reason;
-    // A 403 with no reason is Reddit refusing this server rather than a subreddit; it
-    // blocks anonymous requests from cloud hosts, which REDDIT_CLIENT_ID avoids.
     const reason = given || (status === 404 ? 'not_found' : status === 429 ? 'rate_limited' : status === 403 ? 'blocked' : 'upstream');
-    const message = status === 403
-      ? (given ? 'Reddit refused the request (the subreddit may be private).' : 'Reddit blocked the server’s request. Set REDDIT_CLIENT_ID to sign in.')
-      : `Reddit returned an error (${status}).`;
-    throw Object.assign(new Error(message), { status, reason });
+    throw refused(status, reason, status === 403 ? 'Reddit refused the request (the subreddit may be private).' : `Reddit returned an error (${status}).`);
   }
   return r.json();
+}
+
+// A public Atom feed, used when there is no client ID. `sub` is set for subreddit feeds.
+async function feed(path, params, sub) {
+  const r = await fetch(`https://www.reddit.com${path}?${new URLSearchParams(params)}`, {
+    headers: { 'User-Agent': UA, Accept: 'application/atom+xml' }, signal: AbortSignal.timeout(12_000),
+  }).catch(() => { throw refused(504, 'upstream', 'Reddit took too long to answer.'); });
+  // A subreddit that doesn't exist redirects to the subreddit search feed.
+  let landed = '';
+  try { landed = new URL(r.url).pathname; } catch { /* keep '' */ }
+  if (r.status === 404 || (sub && landed.startsWith('/subreddits/search'))) throw refused(404, 'not_found', 'Reddit has no such page.');
+  if (r.status === 403) throw refused(403, sub ? 'private' : 'blocked', sub ? `Reddit refused the request (r/${sub} may be private).` : 'Reddit refused the request.');
+  if (r.status === 429) throw refused(429, 'rate_limited', 'Reddit is rate-limiting requests. Try again in a minute.');
+  if (!r.ok) throw refused(r.status, 'upstream', `Reddit returned an error (${r.status}).`);
+  const parsed = parseAtom(await r.text());
+  if (!parsed) throw refused(502, 'upstream', 'Reddit sent something Rounds couldn’t read.');
+  return parsed;
 }
 
 const SUB = /^[A-Za-z0-9_]{3,21}$/;
@@ -85,7 +96,8 @@ export default async function handler(req, res) {
   const route = url.searchParams.get('route') || '';
   const q = (k) => url.searchParams.get(k) || '';
   if (req.method !== 'GET') return send(res, 405, { error: 'Method not allowed' });
-  if (route === 'status') return send(res, 200, { rounds: true, oauth: !!CLIENT_ID });
+  // `feeds`: no client ID, so answers come from the public feeds and carry no upvote or comment counts.
+  if (route === 'status') return send(res, 200, { rounds: true, oauth: !!CLIENT_ID, feeds: !CLIENT_ID });
   if (!sameSite(req)) return send(res, 403, { error: 'Forbidden' });
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
   if (overLimit(ip)) {
@@ -96,18 +108,23 @@ export default async function handler(req, res) {
     if (route === 'top' || route === 'hot' || route === 'about') {
       const sub = q('sub');
       if (!SUB.test(sub)) return send(res, 400, { error: 'That isn’t a valid subreddit name.', reason: 'invalid' });
-      if (route === 'about') return send(res, 200, await reddit(`/r/${sub}/about`, {}), LISTING);
+      if (route === 'about') {
+        return send(res, 200, CLIENT_ID ? await reddit(`/r/${sub}/about`, {}) : aboutThing(await feed(`/r/${sub}/.rss`, { limit: '1' }, sub), sub), LISTING);
+      }
       const params = { limit: String(clamp(q('limit'), 1, 100, 100)) };
       if (route === 'top') {
         params.t = WINDOWS.has(q('t')) ? q('t') : 'year';
-        if (AFTER.test(q('after'))) params.after = q('after');
+        if (CLIENT_ID && AFTER.test(q('after'))) params.after = q('after');
       }
-      return send(res, 200, await reddit(`/r/${sub}/${route}`, params), LISTING);
+      if (CLIENT_ID) return send(res, 200, await reddit(`/r/${sub}/${route}`, params), LISTING);
+      return send(res, 200, postsListing(await feed(`/r/${sub}/${route}/.rss`, params, sub), sub), LISTING);
     }
     if (route === 'comments') {
       const id = q('id');
       if (!ID.test(id)) return send(res, 400, { error: 'That isn’t a valid thread id.', reason: 'invalid' });
-      return send(res, 200, await reddit(`/comments/${id}`, { limit: String(clamp(q('limit'), 1, 500, 500)), sort: 'top' }), COMMENTS);
+      const limit = clamp(q('limit'), 1, 500, 500);
+      if (CLIENT_ID) return send(res, 200, await reddit(`/comments/${id}`, { limit: String(limit), sort: 'top' }), COMMENTS);
+      return send(res, 200, commentsPair(await feed(`/comments/${id}/.rss`, { sort: 'top', limit: String(limit) }), limit), COMMENTS);
     }
     return send(res, 404, { error: 'Not found' });
   } catch (e) {
