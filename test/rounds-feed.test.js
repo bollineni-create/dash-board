@@ -2,7 +2,7 @@
 // (the same fixtures as the Mac app's FeedClientTests). Run: node --test test/
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { aboutThing, commentsPair, decodeEntities, parseAtom, postsListing } from '../lib/rounds-feed.js';
+import { aboutThing, budgetOf, commentsPair, decodeEntities, parseAtom, postsListing } from '../lib/rounds-feed.js';
 
 const entry = ({ id, sub = 'mdphd', title, author = 'someone', content, published = '2026-10-22T22:33:31+00:00' }) =>
   `<entry><author><name>/u/${author}</name><uri>https://www.reddit.com/user/${author}</uri></author>`
@@ -109,4 +109,14 @@ test('anything that is not a feed is rejected', () => {
 
 test('entities are decoded once', () => {
   assert.equal(decodeEntities('&amp;lt;b&amp;gt; &#39;x&#x27; &unknown; a\u200bb'), "&lt;b&gt; 'x' &unknown; ab");
+});
+
+test("Reddit's budget: requests left round down, waits round up", () => {
+  const answer = (h) => ({ headers: { get: (name) => h[name] ?? null } });
+  // Half a request left is none; 12.2 seconds is 13.
+  assert.deepEqual(budgetOf(answer({ 'x-ratelimit-remaining': '0.5', 'x-ratelimit-reset': '12.2' })), { remaining: '0', reset: '13', retryAfter: '13' });
+  assert.deepEqual(budgetOf(answer({ 'x-ratelimit-remaining': '3.0', 'x-ratelimit-reset': '40', 'retry-after': '7' })), { remaining: '3', reset: '40', retryAfter: '7' });
+  // Nothing said, or nonsense, is passed on as nothing.
+  assert.deepEqual(budgetOf(answer({ 'x-ratelimit-remaining': 'soon', 'x-ratelimit-reset': '-4' })), { remaining: null, reset: null, retryAfter: null });
+  assert.deepEqual(budgetOf(answer({})), { remaining: null, reset: null, retryAfter: null });
 });
