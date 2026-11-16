@@ -71,7 +71,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new tab, the
 
 ### Which apps fit
 
-- **Static web apps** (plain HTML/JS/CSS, no build step) drop straight in. Gridline and Palimpsest are this kind. So is Rounds, whose web version lives in `web/` in its repo.
+- **Static web apps** (plain HTML/JS/CSS, no build step) drop straight in. Gridline and Palimpsest are this kind. So is Rounds, whose web version lives in `web/` in its repo. Browsers may keep an app's `js/`, `css/` and `assets/` files for an hour (`vercel.json`), so the build adds the app's commit to the address of every script and stylesheet its pages load (`js/app.js?v=<commit>`, done by `lib/stamp-assets.js`): a returning browser gets the new files as soon as the app changes, and never a new file next to an old one. An app doesn't need its own version stamps for the site; one it has is replaced.
 - **Apps with a build step** (Vite, React, and so on) need the build output committed to the repo, or a build step added to `build.mjs`. Point `files` at the output folder.
 - **Apps with their own small server** can keep their page as is and get a function in `api/` for the routes it needs. Ballast is this kind: `api/ballast.js` serves its price and strategy-builder routes by importing Ballast's own modules from `.src/ballast` (the copy the build clones), and `vercel.json` rewrites `/ballast/api/*` to it. Its paper-trading autopilot holds Alpaca keys, so it stays in the Mac app.
 - **Native apps** (SwiftUI and the like) need a web version written for them. Keep it in a folder of the app's own repo and point `root` at it, as Loom does with `web/` in `blank`. Loom has `api/loom.js` here for its Claude and link-reading routes.
