@@ -1,20 +1,22 @@
 # bollineni-create launcher
 
-A console-style home screen that opens each app inside the site: https://bollineni-create.vercel.app
+bollineni.co is one page (`site/index.html`): Naren's resume, with the app launcher as its Apps section. It is shared from LinkedIn only and kept out of search engines (noindex meta tag plus an `X-Robots-Tag` header in `vercel.json`). The launcher wears the resume's look: black ground, white Archivo, square corners, and the chosen app's colour as the only colour in it. `bollineni.co/#gridline` opens Gridline over the page. The old launcher address, `/apps`, forwards here (`/apps#gridline` still opens Gridline).
 
-- `apps.json`: the list of apps on the shelf.
-- `site/index.html`: the launcher page.
-- `build.mjs`: pulls each app from GitHub into `public/<id>/` and writes the shelf into the page.
+- `apps.json`: the list of apps in the launcher.
+- `site/index.html`: the page. The build writes the app list into its launcher and a tab for every app in `apps.json`.
+- `site/fonts/archivo.woff2`: the page's typeface (Archivo, SIL Open Font License), served from the site so the page makes no outside font request.
+- `site/apps/index.html`: forwards the old `/apps` address to the front page.
+- `build.mjs`: pulls each app from GitHub into `public/<id>/` and writes the apps into the front page.
 - `api/relay.js`: the server relay that adds API keys to an app's requests.
 - `vercel.json`: Vercel config. It runs `node build.mjs` on every deploy, and sets the security headers and caching.
 
 ## Using it
 
-- **Choose an app:** swipe the shelf left or right, scroll sideways on a trackpad, use the ← → keys, or tap an icon.
-- **Start an app:** Start or Enter. Each app gets its own address (`/#gridline`), so you can link straight to an app.
-- **Switch apps while one is open:** swipe the top bar, tap a dot, or use ← →.
-- **Go back:** ← Launcher, Esc, or the browser's Back button.
-- **Preloading:** the selected app and the apps next to it load in the background, unless the phone is on Data Saver or a slow connection.
+- **Choose an app:** click its tab in the Apps section, use ← → with a tab focused, swipe across the card, or scroll sideways on a trackpad.
+- **Start an app:** Start, or click the card. It opens full screen over the resume. Each app gets its own address (`/#gridline`), so you can link straight to an app.
+- **Switch apps while one is open:** swipe the top bar or tap a dot. On the unfolded iPhone Duo, a rail of icons down the left does it.
+- **Go back to the resume:** ← Apps, Esc, or the browser's Back button.
+- **Loading:** nothing loads until the Apps section is near the screen. Then the selected app loads, and once you've used the launcher the apps next to it load in the background, unless the phone is on Data Saver or a slow connection.
 
 ## Keeping apps up to date
 
@@ -26,7 +28,7 @@ Vercel has to be connected to this repo (Project → Settings → Git) for a pus
 
 ## Adding an app
 
-Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, the swipe order, the switcher dots and the app's address automatically.
+Add an entry to `apps.json`, then deploy. The launcher picks up the new tab, the swipe order, the switcher dots and the app's address automatically.
 
 ```json
 {
@@ -47,7 +49,7 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not `api`, `icons` or `legal`. |
+| `id` | Lowercase letters, digits and dashes. It becomes the URL: `/myapp/` and `/#myapp`. Not a folder the site uses (`api`, `apps`, `fonts`, `icons`, `legal`) or one of the front page's own anchors (`top`, `main`, `record`, `experience`, `research`, `education`, `leadership`). |
 | `repo` | A public git URL. The site follows the app's default branch: see [Keeping apps up to date](#keeping-apps-up-to-date). |
 | `icon` | Path inside the app's repo. |
 | `tint`, `wash` | The accent colour and the dark background tint shown while the app is selected. |
@@ -65,10 +67,11 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new icon, th
 | `installIcon` | A PNG, 512px or larger, used when someone installs the app to their home screen (Share → Add to Home Screen, or Install app in Chrome). Defaults to `icon`, which then has to be a PNG. |
 | `iconStyle` | Extra CSS for the icon, to nudge one that is off-centre. |
 | `ownsEsc` | `true` if the app uses Esc itself. The launcher then leaves Esc to the app. |
+| `archived` | `true` for a past project kept as a record (PDT App). Its button says View instead of Start. |
 
 ### Which apps fit
 
-- **Static web apps** (plain HTML/JS/CSS, no build step) drop straight in. Gridline and Palimpsest are this kind. So is Rounds, whose web version lives in `web/` in its repo.
+- **Static web apps** (plain HTML/JS/CSS, no build step) drop straight in. Gridline and Palimpsest are this kind. So is Rounds, whose web version lives in `web/` in its repo. Browsers may keep an app's `js/`, `css/` and `assets/` files for an hour (`vercel.json`), so the build adds the app's commit to the address of every script and stylesheet its pages load (`js/app.js?v=<commit>`, done by `lib/stamp-assets.js`): a returning browser gets the new files as soon as the app changes, and never a new file next to an old one. An app doesn't need its own version stamps for the site; one it has is replaced.
 - **Apps with a build step** (Vite, React, and so on) need the build output committed to the repo, or a build step added to `build.mjs`. Point `files` at the output folder.
 - **Apps with their own small server** can keep their page as is and get a function in `api/` for the routes it needs. Ballast is this kind: `api/ballast.js` serves its price and strategy-builder routes by importing Ballast's own modules from `.src/ballast` (the copy the build clones), and `vercel.json` rewrites `/ballast/api/*` to it. Its paper-trading autopilot holds Alpaca keys, so it stays in the Mac app.
 - **Native apps** (SwiftUI and the like) need a web version written for them. Keep it in a folder of the app's own repo and point `root` at it, as Loom does with `web/` in `blank`. Loom has `api/loom.js` here for its Claude and link-reading routes.
@@ -94,7 +97,7 @@ Keys never go to the browser. The relay adds them on the server:
 
 Ballast's Claude strategy builder uses `ANTHROPIC_API_KEY` the same way: set it in Vercel and `api/ballast.js` uses it, limited to `BALLAST_GENERATE_LIMIT` builds per visitor per 10 minutes (default 6). Without it, Ballast uses its built-in builder.
 
-Rounds reads Reddit through `api/rounds.js`, because browsers can't read Reddit's JSON from another site. Set `REDDIT_CLIENT_ID` to an "installed app" client id from https://www.reddit.com/prefs/apps and the route signs in app-only through `oauth.reddit.com`, which has higher rate limits. Without it, the route reads Reddit's public JSON. It only reads, checks that requests come from this site, and caches listings for 5 minutes and comments for 15.
+Rounds reads Reddit through `api/rounds.js`, because browsers can't read Reddit from another site. Without any setup the route reads Reddit's public Atom feeds (`www.reddit.com/…/.rss`), as the Rounds Mac app does: the top posts with their text and each thread's top comments, but no upvote or comment counts and no reply tree, so Rounds ranks those threads by their place in the top list (`lib/rounds-feed.js`, tested by `node --test test/*.test.js`). Reddit refuses anonymous JSON requests from cloud hosts, and since November 2025 it approves API client IDs case by case; if yours is approved, set `REDDIT_CLIENT_ID` to the "installed app" client id from https://www.reddit.com/prefs/apps and the route signs in app-only through `oauth.reddit.com`, which adds the counts, reply threads and higher rate limits. The route only reads and checks that requests come from this site. With the API it caches listings for 5 minutes and comments for 15. With feeds, Reddit allows an address about one request a minute, so answers are kept at the edge much longer and shared by every visitor (a listing is fresh for 30 minutes and a thread's comments for 6 hours, and an older copy is served at once while a new one is fetched), and every answer passes Reddit's own budget on (`X-Reddit-Remaining`, `X-Reddit-Reset`, and `Retry-After` on a 429) so the page waits its turn instead of being refused. While it waits, the page asks for answers with the `X-Rounds-Cached-Only` header: the edge answers from its copy when it has one, and otherwise the route answers an empty 204 without asking Reddit. The page only asks that way when the route's `status` says it understands the header (`cachedOnly`). A first sync with nothing cached therefore lists one subreddit a minute and then loads comments a thread a minute; a client ID removes the wait.
 
 Loom keeps your library in your browser (IndexedDB). Only the text of an item goes to `api/loom.js` when Claude organizes it or answers a question, and images and PDFs are sent so Claude can read them. It uses the same `ANTHROPIC_API_KEY`, with the server-side refusal fallback on; without the key, Loom still saves, searches and maps everything, just without summaries, tags or answers. The route also reads the title and text of links you save. It refuses private and local addresses, checks that requests come from this site and rate-limits each visitor.
 
