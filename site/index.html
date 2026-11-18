@@ -255,8 +255,9 @@ footer { margin-top: 40px; padding-bottom: calc(40px + env(safe-area-inset-botto
 footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 .print-only { display: none; }
 
-/* Tablet and the unfolded iPhone Duo */
-@media (max-width: 960px) {
+/* Tablets and the unfolded iPhone Duo held upright (669 wide). Held sideways (951 wide) it keeps
+   the two-column layout above, so this starts below 900. */
+@media (max-width: 899px) {
   .role, .lede, .actions { grid-column: 1 / -1; }
   .tombs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tomb { min-height: 172px; } .tomb b { font-size: clamp(32px, 7.4cqw, 60px); }
@@ -304,6 +305,27 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .winbar { gap: 8px; } .winbar .t { display: none; } .winbar .pill { padding: 6px 10px; } .dots button { width: 18px; }
   dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } dd { margin-bottom: 10px; }
   .contact { margin-top: 44px; }
+}
+/* Short, wide screens: the iPhone Duo held sideways, closed (594 x 368) or open (951 x 585).
+   The name goes on one line so it still runs edge to edge without filling the screen, and the
+   record comes up into the first view. */
+@media (orientation: landscape) and (max-height: 640px) {
+  .hero { padding-top: 22px; }
+  h1 { font-size: clamp(40px, 10.5cqw, 244px); }
+  h1 .ln { display: inline-block; vertical-align: top; }
+  .intro { margin-top: 22px; }
+  #record { margin-top: 36px; }
+  .tomb { min-height: 138px; padding: 14px 18px 14px; }
+}
+/* Closed Duo held sideways: two tombstones a row instead of a one-column ledger. */
+@media (orientation: landscape) and (max-height: 640px) and (max-width: 760px) {
+  .tombs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tomb { display: flex; align-items: stretch; min-height: 0; gap: 6px; }
+  .tomb > small, .tomb > span, .tomb > b { align-self: auto; text-align: left; }
+  .tomb b { font-size: 30px; text-align: left; }
+  .bar nav { justify-content: flex-start; gap: 22px; }
+  .lede { font-size: 19px; }
+  #record { margin-top: 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
