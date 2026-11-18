@@ -18,6 +18,10 @@
     {
       "source": "/loom/api/:route*",
       "destination": "/api/loom?route=:route*"
+    },
+    {
+      "source": "/sync/api/:route*",
+      "destination": "/api/sync?route=:route*"
     }
   ],
   "headers": [
