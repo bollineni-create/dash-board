@@ -137,3 +137,28 @@ test('one address cannot flood the route, and a storage failure is not blamed on
   const err = console.error; console.error = () => {};
   try { assert.equal((await call(broken)).code, 502); } finally { console.error = err; }
 });
+
+test('a save that loses a race while writing over a missing file still gets the other save back', async () => {
+  const blob = memoryBlob();
+  const handler = createHandler(makeStore(blob, 'production'));
+  const path = pathFor('production', ID, 'gridline');
+  // Another device saves between this one's refused write and its second try.
+  const write = blob.write;
+  let raced = false;
+  blob.write = async (p, text, opts) => {
+    if (opts.ifMatch === null && !raced && blob.files.size === 0 && text.includes('late')) {
+      raced = true;
+      await write(p, JSON.stringify({ payload: 'theirs', updatedAt: 'now' }), { ifMatch: null });
+    }
+    return write(p, text, opts);
+  };
+  const lost = await call(handler, { method: 'PUT', body: { payload: 'late', base: '"gone"' } });
+  assert.equal(lost.code, 409);
+  assert.equal(lost.data.current.payload, 'theirs');
+  assert.equal(JSON.parse(blob.files.get(path).text).payload, 'theirs');
+  // A file that stays unreadable and keeps changing is given up on as a conflict, not a storage failure.
+  blob.write = async () => { blob.files.set(path, { text: 'junk', version: `"j${Math.random()}"` }); throw Object.assign(new Error('pre'), { conflict: true }); };
+  const stuck = await call(handler, { method: 'PUT', id: ID, body: { payload: 'x', base: null } });
+  assert.equal(stuck.code, 409);
+  assert.equal(stuck.data.current, undefined);
+});
