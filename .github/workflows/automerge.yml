@@ -1,0 +1,132 @@
+# Merges a pull request on its own once Cursor has approved it and every check and status has passed.
+# Cursor reviews each PR (Bugbot, the security reviewer and the approval agent). If it asks
+# for changes or pushes a fix, nothing merges until it approves the newest commit.
+name: Auto-merge after Cursor approves
+# Every trigger runs the copy of this file on the default branch, never a PR's own copy,
+# so a PR cannot edit this workflow to merge itself. Cursor's check suite finishing wakes
+# this up (and the run then waits for Cursor's decision); the 10-minute schedule catches a
+# decision that lands later. Scheduled runs are free on this public repository.
+on:
+  pull_request_target:
+    types: [ready_for_review]
+  check_suite:
+    types: [completed]
+  status: {}
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+concurrency:
+  group: auto-merge
+  cancel-in-progress: false
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Gates that must report success on the PR's newest commit, as "name@source": a check
+      # run from that GitHub App (github-actions, cursor), or "@status:<app>" for a commit status
+      # posted by that app's bot account (e.g. Vercel@status:vercel means vercel[bot]).
+      # A required gate that hasn't reported counts as pending; neutral or skipped is a fail.
+      REQUIRED_CHECKS: "Vercel@status:vercel, Cursor Bugbot@cursor, Cursor Security Agent: Security Reviewer@cursor"
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const OK = ['success', 'neutral', 'skipped'];
+            const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean)
+              .map((spec) => { const at = spec.lastIndexOf('@'); return { name: spec.slice(0, at), source: spec.slice(at + 1) }; });
+            const AGENT = 'Cursor Approval Agent: Pull Request Router and Approver';
+            const suite = context.eventName === 'check_suite' ? context.payload.check_suite : null;
+            // Cursor's approval agent posts its decision up to several minutes after its check run
+            // completes (it waits for Bugbot first). When Cursor's suite for a PR's newest commit wakes
+            // this job, keep reading reviews for up to this long for its decision on that commit.
+            const DECISION_WAIT_MS = 9 * 60 * 1000;
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            // Never check out or run the PR's code here: this job holds a write token.
+            const candidates = context.payload.pull_request
+              ? [context.payload.pull_request]
+              : await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+            for (const { number } of candidates) {
+              const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+              if (pr.state !== 'open' || pr.draft || pr.base.ref !== pr.base.repo.default_branch) continue;
+              if (pr.head.repo.full_name !== `${owner}/${repo}`) continue; // never merge forks
+              const sha = pr.head.sha;
+
+              // Cursor's newest verdict (an approval, a change request, or its approval agent's
+              // "Not approved" comment) must be an approval of this exact commit. An approval of an
+              // older commit never counts: the agent doesn't always re-decide after a push, and its
+              // check run completing says nothing about when its decision lands. A review can't wake
+              // this job safely (pull_request_review would run the PR's own copy of this file), so when
+              // Cursor's suite for this commit woke us we wait here for the decision, and the schedule above sweeps up any that land later.
+              const fromAgent = (r) => /Sent by Cursor Approval Agent/.test(r.body || '');
+              const cursorVerdict = async () => {
+                const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
+                return reviews.filter((r) => r.user?.login === 'cursor[bot]' && (['APPROVED', 'CHANGES_REQUESTED'].includes(r.state) || fromAgent(r))).pop();
+              };
+              let verdict = await cursorVerdict();
+              if (suite?.app?.slug === 'cursor' && suite.head_sha === sha) {
+                for (const until = Date.now() + DECISION_WAIT_MS; verdict?.commit_id !== sha && Date.now() < until;) {
+                  await sleep(20000);
+                  verdict = await cursorVerdict();
+                }
+              }
+              if (verdict?.state !== 'APPROVED' || verdict.commit_id !== sha) {
+                core.info(`#${number}: waiting for Cursor to approve ${sha.slice(0, 7)}`);
+                continue;
+              }
+
+              // Every other check on that commit must have finished green.
+              const runs = (await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, per_page: 100 }))
+                .filter((r) => r.name !== 'auto-merge');
+              const pending = runs.filter((r) => r.status !== 'completed').map((r) => r.name);
+              const failed = runs.filter((r) => r.status === 'completed' && !OK.includes(r.conclusion)).map((r) => r.name);
+              // Commit statuses too (Vercel reports its preview deployment this way).
+              const { data: combined } = await github.rest.repos.getCombinedStatusForRef({ owner, repo, ref: sha });
+              for (const s of combined.statuses) {
+                if (s.state === 'pending') pending.push(s.context);
+                else if (s.state !== 'success') failed.push(s.context);
+              }
+              // Required gates must come from the expected source and end in success. Not yet
+              // reported counts as pending; a same-named check from another app doesn't count.
+              let statusList; // newest first
+              for (const { name, source } of REQUIRED) {
+                if (source.startsWith('status:')) {
+                  // Commit statuses aren't bound to an app (anyone with statuses: write can post any
+                  // context), so only count the newest one posted by that app's own bot account.
+                  const bot = `${source.slice(7)}[bot]`;
+                  statusList ??= await github.paginate(github.rest.repos.listCommitStatusesForRef, { owner, repo, ref: sha, per_page: 100 });
+                  const st = statusList.find((s) => s.context === name && s.creator?.login === bot);
+                  if (!st || st.state === 'pending') pending.push(`${name}${st ? '' : ' (not started)'}`);
+                  else if (st.state !== 'success') failed.push(`${name} (${st.state})`);
+                  continue;
+                }
+                const mine = runs.filter((r) => r.name === name && r.app?.slug === source);
+                if (!mine.length) pending.push(`${name} (not started)`);
+                else if (mine.some((r) => r.status !== 'completed')) pending.push(name);
+                else if (mine.some((r) => r.conclusion !== 'success')) failed.push(`${name} (${mine.map((r) => r.conclusion).join('/')})`);
+              }
+              if (!runs.length && !combined.statuses.length) pending.push('no checks reported yet');
+              if (pending.length || failed.length) {
+                core.info(`#${number}: pending [${pending.join(', ')}] failed [${failed.join(', ')}]`);
+                continue;
+              }
+              if (pr.mergeable === false) {
+                core.warning(`#${number}: has a merge conflict, not merging`);
+                continue;
+              }
+
+              // One PR failing to merge (a conflict, a race) must not stop the others.
+              try {
+                await github.rest.pulls.merge({ owner, repo, pull_number: number, merge_method: 'squash', sha });
+                core.notice(`Merged #${number} (${pr.title})`);
+                await github.rest.git.deleteRef({ owner, repo, ref: `heads/${pr.head.ref}` }).catch(() => {});
+              } catch (err) {
+                core.warning(`#${number}: merge failed: ${err.message}`);
+              }
+            }
