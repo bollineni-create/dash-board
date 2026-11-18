@@ -2,7 +2,7 @@
 // lib/sync.js; this file only connects them to the site's private Vercel Blob store. Without a
 // store (no BLOB_READ_WRITE_TOKEN) the route answers `status` with sync off and the apps hide it.
 import { BlobPreconditionFailedError, del, get, put } from '@vercel/blob';
-import { createHandler, makeStore } from '../lib/sync.js';
+import { KEEP_DAYS, createHandler, makeStore } from '../lib/sync.js';
 
 const access = 'private';
 
@@ -11,10 +11,11 @@ const blob = {
   async read(path) {
     const found = await get(path, { access, useCache: false });
     if (!found || found.statusCode !== 200) return null;
-    return { text: await new Response(found.stream).text(), version: found.blob.etag };
+    return { text: await new Response(found.stream).text(), version: found.blob.etag, writtenAt: new Date(found.blob.uploadedAt).getTime() };
   },
   async write(path, text, { ifMatch }) {
-    const options = { access, addRandomSuffix: false, contentType: 'application/json', cacheControlMaxAge: 60 };
+    // ttlDays counts from this write, so each save pushes the file's expiry out again.
+    const options = { access, addRandomSuffix: false, contentType: 'application/json', cacheControlMaxAge: 60, ttlDays: KEEP_DAYS };
     try {
       const saved = await put(path, text, ifMatch ? { ...options, ifMatch } : { ...options, allowOverwrite: false });
       return { version: saved.etag };
