@@ -4,17 +4,18 @@ import { APPS, createHandler, makeStore, pathFor, validId } from '../lib/sync.js
 
 // A store kept in memory that behaves like the Blob store: versions change on every write, and
 // a write whose ifMatch (a version, or null for "nothing there yet") doesn't hold is refused.
+const clock = { t: Date.now() };
 function memoryBlob() {
   const files = new Map();
   let n = 0;
   return {
     files,
-    async read(path) { const f = files.get(path); return f ? { text: f.text, version: f.version } : null; },
+    async read(path) { const f = files.get(path); return f ? { text: f.text, version: f.version, writtenAt: f.writtenAt } : null; },
     async write(path, text, { ifMatch }) {
       const f = files.get(path);
       if (ifMatch ? !f || f.version !== ifMatch : !!f) throw Object.assign(new Error('precondition'), { conflict: true });
       const version = `"v${++n}"`;
-      files.set(path, { text, version });
+      files.set(path, { text, version, writtenAt: clock.t });
       return { version };
     },
     async remove(path) { files.delete(path); },
@@ -161,4 +162,66 @@ test('a save that loses a race while writing over a missing file still gets the 
   const stuck = await call(handler, { method: 'PUT', id: ID, body: { payload: 'x', base: null } });
   assert.equal(stuck.code, 409);
   assert.equal(stuck.data.current, undefined);
+});
+
+test('a save still being read is written again before it expires, and one nobody reads is left to expire', async () => {
+  const blob = memoryBlob();
+  const day = 86_400_000;
+  const handler = createHandler(makeStore(blob, 'production', () => clock.t));
+  const path = pathFor('production', ID, 'gridline');
+  await call(handler, { method: 'PUT', body: { payload: 'kept', base: null } });
+  const written = blob.files.get(path).writtenAt;
+  clock.t = written + 100 * day;
+  await call(handler);
+  assert.equal(blob.files.get(path).writtenAt, written, 'a recent file is left alone');
+  clock.t = written + 181 * day;
+  const read = await call(handler);
+  assert.equal(read.data.payload, 'kept');
+  assert.equal(blob.files.get(path).writtenAt, clock.t);
+  assert.equal(read.data.version, blob.files.get(path).version, 'the device is told the version it now has');
+  assert.equal(JSON.parse(blob.files.get(path).text).payload, 'kept');
+  clock.t = Date.now();
+});
+
+test('an address that has used up its new codes can still save to an old file about to be renewed', async () => {
+  const blob = memoryBlob();
+  const handler = createHandler(makeStore(blob, 'production', () => clock.t));
+  const ip = '4.4.4.4';
+  const code = (n) => (0xabc000 + n).toString(16).padStart(64, '0');
+  const mine = await call(handler, { method: 'PUT', ip, id: code(0), body: { payload: 'x', base: null } });
+  for (let n = 1; n < 6; n++) await call(handler, { method: 'PUT', ip, id: code(n), body: { payload: 'x', base: null } });
+  blob.files.get(pathFor('production', code(0), 'gridline')).writtenAt = clock.t - 200 * 86_400_000;
+  // The limit's look at the file must not renew it, or this save's version would be out of date.
+  const saved = await call(handler, { method: 'PUT', ip, id: code(0), body: { payload: 'y', base: mine.data.version } });
+  assert.equal(saved.code, 200);
+});
+
+test('one address can start only a few new codes an hour, and its existing saves keep working', async () => {
+  const handler = createHandler(makeStore(memoryBlob(), 'production'));
+  const ip = '7.7.7.7';
+  const code = (n) => n.toString(16).padStart(64, '0');
+  const first = await call(handler, { method: 'PUT', ip, id: code(0), body: { payload: 'x', base: null } });
+  for (let n = 1; n < 6; n++) assert.equal((await call(handler, { method: 'PUT', ip, id: code(n), body: { payload: 'x', base: null } })).code, 200);
+  const seventh = await call(handler, { method: 'PUT', ip, id: code(6), body: { payload: 'x', base: null } });
+  assert.equal(seventh.code, 429);
+  assert.equal(seventh.headers['Retry-After'], '3600');
+  // Naming a version doesn't get a new file past the limit either.
+  assert.equal((await call(handler, { method: 'PUT', ip, id: code(7), body: { payload: 'x', base: '"made up"' } })).code, 429);
+  // Saves to a code that already exists are not new codes.
+  assert.equal((await call(handler, { method: 'PUT', ip, id: code(0), body: { payload: 'y', base: first.data.version } })).code, 200);
+  assert.equal(first.data.created, undefined);
+  // Another address is unaffected.
+  assert.equal((await call(handler, { method: 'PUT', ip: '8.8.8.8', id: code(8), body: { payload: 'x', base: null } })).code, 200);
+  // Sent all at once, a burst gets no more than the same six.
+  const burst = await Promise.all(Array.from({ length: 12 }, (_, n) => call(handler, { method: 'PUT', ip: '6.6.6.6', id: code(100 + n), body: { payload: 'x', base: n % 2 ? null : '"made up"' } })));
+  assert.equal(burst.filter((r) => r.code === 200).length, 6);
+  assert.equal(burst.filter((r) => r.code === 429).length, 6);
+  // Conflicts and saves to existing codes hand their count back, so they never use up the six.
+  const own = await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'x', base: null } });
+  for (let n = 0; n < 10; n++) {
+    assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'y', base: '"stale"' } })).code, 409);
+  }
+  let version = own.data.version;
+  for (let n = 0; n < 10; n++) version = (await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'z' + n, base: version } })).data.version;
+  for (let n = 1; n < 6; n++) assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200 + n), body: { payload: 'x', base: null } })).code, 200);
 });
