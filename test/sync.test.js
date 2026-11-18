@@ -183,6 +183,19 @@ test('a save still being read is written again before it expires, and one nobody
   clock.t = Date.now();
 });
 
+test('an address that has used up its new codes can still save to an old file about to be renewed', async () => {
+  const blob = memoryBlob();
+  const handler = createHandler(makeStore(blob, 'production', () => clock.t));
+  const ip = '4.4.4.4';
+  const code = (n) => (0xabc000 + n).toString(16).padStart(64, '0');
+  const mine = await call(handler, { method: 'PUT', ip, id: code(0), body: { payload: 'x', base: null } });
+  for (let n = 1; n < 6; n++) await call(handler, { method: 'PUT', ip, id: code(n), body: { payload: 'x', base: null } });
+  blob.files.get(pathFor('production', code(0), 'gridline')).writtenAt = clock.t - 200 * 86_400_000;
+  // The limit's look at the file must not renew it, or this save's version would be out of date.
+  const saved = await call(handler, { method: 'PUT', ip, id: code(0), body: { payload: 'y', base: mine.data.version } });
+  assert.equal(saved.code, 200);
+});
+
 test('one address can start only a few new codes an hour, and its existing saves keep working', async () => {
   const handler = createHandler(makeStore(memoryBlob(), 'production'));
   const ip = '7.7.7.7';
