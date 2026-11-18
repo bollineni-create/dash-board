@@ -5,7 +5,9 @@ name: Auto-merge after Cursor approves
 # Every trigger runs the copy of this file on the default branch, never a PR's own copy,
 # so a PR cannot edit this workflow to merge itself. Cursor's check suite finishing wakes
 # this up (and the run then waits for Cursor's decision); the 10-minute schedule catches a
-# decision that lands later. Scheduled runs are free on this public repository.
+# decision that lands later. Scheduled runs are free on this public repository. There is no
+# manual-run trigger on purpose: workflow_dispatch runs the copy on whichever branch is picked,
+# so a PR could edit this file and dispatch its own copy.
 on:
   pull_request_target:
     types: [ready_for_review]
@@ -14,7 +16,6 @@ on:
   status: {}
   schedule:
     - cron: "*/10 * * * *"
-  workflow_dispatch:
 permissions:
   contents: write
   pull-requests: write
