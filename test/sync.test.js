@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { APPS, createHandler, makeStore, pathFor, validId } from '../lib/sync.js';
+import { APPS, createHandler, makeStore, pathFor, plainVersion, validId } from '../lib/sync.js';
 
 // A store kept in memory that behaves like the Blob store: versions change on every write, and
 // a write whose ifMatch (a version, or null for "nothing there yet") doesn't hold is refused.
@@ -224,4 +224,35 @@ test('one address can start only a few new codes an hour, and its existing saves
   let version = own.data.version;
   for (let n = 0; n < 10; n++) version = (await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'z' + n, base: version } })).data.version;
   for (let n = 1; n < 6; n++) assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200 + n), body: { payload: 'x', base: null } })).code, 200);
+});
+
+test('a version read back marked weak still works for the next save', async () => {
+  // Like the real store: writes answer "abc", reads of larger files answer W/"abc", and a
+  // conditional write accepts only the plain form.
+  const blob = memoryBlob();
+  const read = blob.read;
+  blob.read = async (path) => { const f = await read(path); return f && f.text.length > 100 ? { ...f, version: 'W/' + f.version } : f; };
+  const handler = createHandler(makeStore(blob, 'production', () => clock.t));
+  const big = 'x'.repeat(500);
+  const first = await call(handler, { method: 'PUT', body: { payload: big, base: null } });
+  const got = await call(handler);
+  assert.equal(got.data.version, first.data.version);
+  assert.ok(!got.data.version.startsWith('W/'));
+  // A second device saves from the version it read, and one still holding a weak version can too.
+  const second = await call(handler, { method: 'PUT', body: { payload: big + '2', base: got.data.version } });
+  assert.equal(second.code, 200);
+  assert.equal((await call(handler, { method: 'PUT', body: { payload: big + '3', base: 'W/' + second.data.version } })).code, 200);
+  // A stale save is told the current version in the form it can use.
+  const stale = await call(handler, { method: 'PUT', body: { payload: 'late', base: first.data.version } });
+  assert.equal(stale.code, 409);
+  assert.ok(!stale.data.current.version.startsWith('W/'));
+  assert.equal((await call(handler, { method: 'PUT', body: { payload: 'merged', base: stale.data.current.version } })).code, 200);
+  // An old file is renewed from a weak version as well.
+  const path = pathFor('production', ID, 'gridline');
+  blob.files.set(path, { ...blob.files.get(path), text: JSON.stringify({ payload: big, updatedAt: 'x' }), writtenAt: clock.t - 200 * 86_400_000 });
+  const renewed = await call(handler);
+  assert.equal(blob.files.get(path).writtenAt, clock.t);
+  assert.equal(renewed.data.version, blob.files.get(path).version);
+  assert.equal(plainVersion('W/"a"'), '"a"');
+  assert.equal(plainVersion(null), null);
 });
