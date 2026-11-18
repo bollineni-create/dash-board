@@ -199,4 +199,16 @@ test('one address can start only a few new codes an hour, and its existing saves
   assert.equal(first.data.created, undefined);
   // Another address is unaffected.
   assert.equal((await call(handler, { method: 'PUT', ip: '8.8.8.8', id: code(8), body: { payload: 'x', base: null } })).code, 200);
+  // Sent all at once, a burst gets no more than the same six.
+  const burst = await Promise.all(Array.from({ length: 12 }, (_, n) => call(handler, { method: 'PUT', ip: '6.6.6.6', id: code(100 + n), body: { payload: 'x', base: n % 2 ? null : '"made up"' } })));
+  assert.equal(burst.filter((r) => r.code === 200).length, 6);
+  assert.equal(burst.filter((r) => r.code === 429).length, 6);
+  // Conflicts and saves to existing codes hand their count back, so they never use up the six.
+  const own = await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'x', base: null } });
+  for (let n = 0; n < 10; n++) {
+    assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'y', base: '"stale"' } })).code, 409);
+  }
+  let version = own.data.version;
+  for (let n = 0; n < 10; n++) version = (await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'z' + n, base: version } })).data.version;
+  for (let n = 1; n < 6; n++) assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200 + n), body: { payload: 'x', base: null } })).code, 200);
 });
