@@ -92,7 +92,14 @@ async function feed(path, params, sub) {
   // A subreddit that doesn't exist redirects to the subreddit search feed.
   let landed = '';
   try { landed = new URL(r.url).pathname; } catch { /* keep '' */ }
-  if (r.status === 404 || (sub && landed.startsWith('/subreddits/search'))) throw no(404, 'not_found', 'Reddit has no such page.');
+  if (sub && landed.startsWith('/subreddits/search')) throw no(404, 'not_found', 'Reddit has no such page.');
+  // Reddit answers a feed request it is blocking with a bare 404, even for subreddits that exist
+  // (r/medicalschool came back 404 from a cloud address). A missing subreddit redirects to search
+  // instead (above), so a bare 404 on a subreddit feed is a refusal to retry, not "doesn't exist".
+  if (r.status === 404 && sub) {
+    throw no(503, 'unavailable', 'Reddit didn’t answer this time. Try again in a minute.');
+  }
+  if (r.status === 404) throw no(404, 'not_found', 'Reddit has no such page.');
   if (r.status === 403) throw no(403, sub ? 'private' : 'blocked', sub ? `Reddit refused the request (r/${sub} may be private).` : 'Reddit refused the request.');
   if (r.status === 429) throw no(429, 'rate_limited', 'Reddit is rate-limiting requests. Try again in a minute.');
   if (!r.ok) throw no(r.status, 'upstream', `Reddit returned an error (${r.status}).`);
