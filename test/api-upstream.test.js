@@ -1,6 +1,5 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import rounds from '../api/rounds.js';
 import relay from '../api/relay.js';
 
 function call(handler, url, ip) {
@@ -24,26 +23,8 @@ function fakeFetch(status, landedUrl, body = '') {
   };
 }
 
-test('rounds: a bare 404 on a subreddit feed is a retryable refusal, not "doesn\'t exist"', async (t) => {
-  t.mock.method(globalThis, 'fetch', fakeFetch(404, 'https://www.reddit.com/r/medicalschool/top/.rss'));
-  const res = await call(rounds, '/api/rounds?route=top&sub=medicalschool&t=month&limit=100', '10.0.0.1');
-  assert.equal(res.code, 503);
-  assert.equal(res.data.reason, 'unavailable');
-  assert.equal(res.headers['Cache-Control'], 'no-store');
-});
 
-test('rounds: a redirect to subreddit search still means the subreddit does not exist', async (t) => {
-  t.mock.method(globalThis, 'fetch', fakeFetch(200, 'https://www.reddit.com/subreddits/search/.rss?q=nosuchsubzz'));
-  const res = await call(rounds, '/api/rounds?route=top&sub=nosuchsubzz&t=month', '10.0.0.2');
-  assert.equal(res.code, 404);
-  assert.equal(res.data.reason, 'not_found');
-});
 
-test('rounds: a 404 on a thread still means the thread is gone', async (t) => {
-  t.mock.method(globalThis, 'fetch', fakeFetch(404, 'https://www.reddit.com/comments/abc123/.rss'));
-  const res = await call(rounds, '/api/rounds?route=comments&id=abc123', '10.0.0.3');
-  assert.equal(res.code, 404);
-});
 
 test('relay: a hung upstream answers 504 instead of holding the function open', async (t) => {
   process.env.VISOR_KEY = 'test-key';

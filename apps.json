@@ -78,29 +78,6 @@
     "wash": "#0A2826"
   },
   {
-    "id": "rounds",
-    "name": "Rounds",
-    "repo": "https://github.com/bollineni-create/read-it-client.git",
-    "root": "web",
-    "files": [
-      "index.html",
-      "css",
-      "js",
-      "assets"
-    ],
-    "icon": "web/assets/icon.png",
-    "installIcon": "web/assets/icon-512.png",
-    "kind": "Reddit reader · any subreddit",
-    "pitch": "Follow the subreddits you care about. Rounds pulls the best threads and their comments, ranks them, and gathers the links people share into a reading list.",
-    "chips": [
-      "Ranked threads",
-      "Resource links",
-      "Saved offline"
-    ],
-    "tint": "#2FA39C",
-    "wash": "#062624"
-  },
-  {
     "id": "loom",
     "name": "Loom",
     "repo": "https://github.com/bollineni-create/blank.git",
