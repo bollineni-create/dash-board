@@ -27,6 +27,11 @@
       "permanent": false
     },
     {
+      "source": "/rounds/",
+      "destination": "/",
+      "permanent": false
+    },
+    {
       "source": "/rounds/:path*",
       "destination": "/",
       "permanent": false
