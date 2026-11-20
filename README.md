@@ -22,6 +22,7 @@ bollineni.co is one page (`site/index.html`): Naren's resume, with the app launc
 
 - **Every app with a `repo`** (all of them: Gridline, Palimpsest, Ballast and Loom) follows its repo's default branch. Each app repo has `.github/workflows/notify-dash-board.yml`, which tells this repo about every push to `main`. That starts `.github/workflows/sync-apps.yml`, which writes the app's new commit into `apps.lock.json` and commits it to `main`, and Vercel then deploys `main`. A push to an app reaches the site in a minute or two. The notify step needs a `DASH_BOARD_TOKEN` secret in each app repo (a fine-grained token with *Contents: read and write* on this repo). As a backup, `sync-apps.yml` also checks every app every 5 minutes, though GitHub can run scheduled workflows late or skip them when it's busy. To update right away, start the workflow by hand from the Actions tab (*Sync apps → Run workflow*).
 - **Holding an app at a version:** set `commit` in `apps.json` to the commit you want. The site then shows that commit until you change or remove it.
+- **Bridge** comes from the `web/` folder of its repo (`bridge`): a showcase page for the native Mac and iPhone apps (screenshots, what it does, a link to the code), since the apps themselves run against a local engine.
 - **Loom** comes from the `web/` folder of its repo (`blank`), next to the SwiftUI app, so a push there that touches `web/` changes the site like any other app.
 
 Vercel has to be connected to this repo (Project → Settings → Git) for a push to `main` to deploy.
