@@ -482,7 +482,9 @@
         const r = await request(code, 'PUT', app, { payload: await seal(keys.key, meta.doc), base: meta.version });
         if (r.status !== 200) continue;
         const now = (await idb.get('app:' + app)) || meta;
-        if (now.version !== meta.version) continue; // the app itself saved meanwhile
+        // A PUT is the only thing that moves version. changed() writes a newer doc at the
+        // same version, so an unchanged version is not the snapshot the server just stored.
+        if (now.version !== meta.version || !same(now.doc, meta.doc)) continue;
         await idb.set('app:' + app, { ...now, version: r.data.version, dirty: false, syncedAt: Date.now() });
       } catch (e) { /* the app sends it when it next opens */ }
     }
