@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { APPS, createHandler, makeStore, pathFor, plainVersion, validId } from '../lib/sync.js';
+import { APPS, FILES, createHandler, makeStore, pathFor, plainVersion, validId } from '../lib/sync.js';
 
 // A store kept in memory that behaves like the Blob store: versions change on every write, and
 // a write whose ifMatch (a version, or null for "nothing there yet") doesn't hold is refused.
@@ -19,13 +19,16 @@ function memoryBlob() {
       return { version };
     },
     async remove(path) { files.delete(path); },
+    async put(path, text) { files.set(path, { text, version: `"v${++n}"`, writtenAt: clock.t }); },
+    async list(prefix) { return [...files.keys()].filter((p) => p.startsWith(prefix)); },
+    async removeMany(paths) { for (const p of paths) files.delete(p); },
   };
 }
 
 const ID = 'a'.repeat(64);
 const OTHER = 'b'.repeat(64);
 
-function call(handler, { method = 'GET', route = 'gridline', id = ID, body, site = 'same-origin', ip = '1.1.1.1' } = {}) {
+function call(handler, { method = 'GET', route = 'gridline', id = ID, body, site = 'same-origin', ip = '1.1.1.1', query = '' } = {}) {
   const headers = { host: 'bollineni.co', 'x-forwarded-for': ip };
   if (site) headers['sec-fetch-site'] = site;
   if (id) headers.authorization = 'Bearer ' + id;
@@ -35,7 +38,7 @@ function call(handler, { method = 'GET', route = 'gridline', id = ID, body, site
     setHeader(k, v) { this.headers[k] = v; return this; },
     json(d) { this.data = d; return this; },
   };
-  return handler({ method, url: `/api/sync?route=${route}`, headers, body }, res).then(() => res);
+  return handler({ method, url: `/api/sync?route=${route}${query}`, headers, body }, res).then(() => res);
 }
 
 test('an id is 64 lowercase hex characters and nothing else', () => {
@@ -122,7 +125,7 @@ test('a save that is malformed or too large is refused', async () => {
 
 test('status says whether sync is set up, without a code', async () => {
   const on = await call(createHandler(makeStore(memoryBlob())), { route: 'status', id: null, site: null });
-  assert.deepEqual(on.data, { sync: true, apps: ['gridline'] });
+  assert.deepEqual(on.data, { sync: true, apps: ['gridline', 'loom'] });
   const off = createHandler(null);
   assert.deepEqual((await call(off, { route: 'status', id: null, site: null })).data, { sync: false, apps: [] });
   assert.equal((await call(off)).code, 503);
@@ -255,4 +258,73 @@ test('a version read back marked weak still works for the next save', async () =
   assert.equal(renewed.data.version, blob.files.get(path).version);
   assert.equal(plainVersion('W/"a"'), '"a"');
   assert.equal(plainVersion(null), null);
+});
+
+// ---- Loom: library and files ---------------------------------------------------------------
+
+const FILE = '0f8a3c2e-1b4d-4e5f-9a6b-7c8d9e0f1a2b';
+const chunk = (c, extra = {}) => ({ route: 'loom-files', query: `&f=${FILE}&c=${c}`, ...extra });
+
+test('Loom syncs, with room for a whole library', async () => {
+  assert.ok(APPS.loom > 1_000_000 && APPS.loom < 4_500_000);
+  const handler = createHandler(makeStore(memoryBlob(), 'production'));
+  const status = await call(handler, { route: 'status' });
+  assert.ok(status.data.apps.includes('loom'));
+  const big = 'x'.repeat(2_000_000);
+  assert.equal((await call(handler, { method: 'PUT', route: 'loom', body: { payload: big, base: null } })).code, 200);
+  assert.equal((await call(handler, { route: 'loom' })).data.payload, big);
+});
+
+test("a file's chunks are stored and read back, but only under a code that has a save", async () => {
+  const blob = memoryBlob();
+  const handler = createHandler(makeStore(blob, 'production'));
+  assert.equal((await call(handler, { method: 'PUT', ...chunk(0, { body: { data: 'QUJD' } }) })).code, 404);
+  await call(handler, { method: 'PUT', route: 'loom', body: { payload: 'lib', base: null } });
+  assert.equal((await call(handler, { method: 'PUT', ...chunk(0, { body: { data: 'QUJD' } }) })).code, 200);
+  assert.equal((await call(handler, { method: 'PUT', ...chunk(1, { body: { data: 'REVG' } }) })).code, 200);
+  // Sent twice (a retry after a dropped answer): lands on itself.
+  assert.equal((await call(handler, { method: 'PUT', ...chunk(1, { body: { data: 'REVG' } }) })).code, 200);
+  assert.equal((await call(handler, chunk(0))).data.data, 'QUJD');
+  assert.equal((await call(handler, chunk(1))).data.data, 'REVG');
+  assert.equal((await call(handler, chunk(2))).code, 404);
+  // Another code sees nothing, and nothing in the store names the id or the file in the clear.
+  assert.equal((await call(handler, chunk(0, { id: OTHER }))).code, 404);
+  assert.ok([...blob.files.keys()].every((p) => !p.includes(ID)));
+});
+
+test('a bad file id, chunk number or chunk body is refused', async () => {
+  const handler = createHandler(makeStore(memoryBlob(), 'production'));
+  await call(handler, { method: 'PUT', route: 'loom', body: { payload: 'lib', base: null } });
+  for (const query of ['&f=../x&c=0', '&f=short&c=0', `&f=${FILE}&c=-1`, `&f=${FILE}&c=${FILES.loom.chunks}`, `&f=${FILE}&c=1.5`, `&f=${FILE}&c=01`, `&f=${FILE}`]) {
+    assert.equal((await call(handler, { route: 'loom-files', query })).code, 400, query);
+  }
+  assert.equal((await call(handler, { method: 'PUT', ...chunk(0, { body: { data: '<script>' } }) })).code, 400);
+  assert.equal((await call(handler, { method: 'PUT', ...chunk(0, { body: { data: 'A'.repeat(FILES.loom.chunk + 4) } }) })).code, 413);
+  assert.equal((await call(handler, { method: 'POST', ...chunk(0) })).code, 405);
+  assert.equal((await call(handler, { ...chunk(0), id: null })).code, 401);
+  assert.equal((await call(handler, { ...chunk(0), site: 'cross-site' })).code, 403);
+});
+
+test("deleting a file removes its chunks; erasing Loom's save removes every file", async () => {
+  const blob = memoryBlob();
+  const handler = createHandler(makeStore(blob, 'production'));
+  await call(handler, { method: 'PUT', route: 'loom', body: { payload: 'lib', base: null } });
+  const other = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+  await call(handler, { method: 'PUT', ...chunk(0, { body: { data: 'QUJD' } }) });
+  await call(handler, { method: 'PUT', route: 'loom-files', query: `&f=${other}&c=0`, body: { data: 'QUJD' } });
+  assert.equal((await call(handler, { method: 'DELETE', route: 'loom-files', query: `&f=${FILE}` })).code, 200);
+  assert.equal((await call(handler, chunk(0))).code, 404);
+  assert.equal((await call(handler, { route: 'loom-files', query: `&f=${other}&c=0` })).code, 200);
+  assert.equal((await call(handler, { method: 'DELETE', route: 'loom' })).code, 200);
+  assert.equal(blob.files.size, 0);
+});
+
+test("a device that already has the latest version isn't sent it again", async () => {
+  const handler = createHandler(makeStore(memoryBlob(), 'production'));
+  const saved = await call(handler, { method: 'PUT', route: 'loom', body: { payload: 'lib', base: null } });
+  const same = await call(handler, { route: 'loom', query: '&since=' + encodeURIComponent(saved.data.version) });
+  assert.equal(same.data.unchanged, true);
+  assert.equal(same.data.payload, undefined);
+  const stale = await call(handler, { route: 'loom', query: '&since=' + encodeURIComponent('"old"') });
+  assert.equal(stale.data.payload, 'lib');
 });

@@ -1,7 +1,7 @@
 // Sync for the apps on the hosted site (/sync/api/<app> is rewritten here). The rules are in
 // lib/sync.js; this file only connects them to the site's private Vercel Blob store. Without a
 // store (no BLOB_READ_WRITE_TOKEN) the route answers `status` with sync off and the apps hide it.
-import { BlobPreconditionFailedError, del, get, put } from '@vercel/blob';
+import { BlobPreconditionFailedError, del, get, list, put } from '@vercel/blob';
 import { KEEP_DAYS, createHandler, makeStore } from '../lib/sync.js';
 
 const access = 'private';
@@ -29,6 +29,23 @@ const blob = {
     }
   },
   async remove(path) { await del(path); },
+  // File chunks: written whole, no version check (a chunk's contents never change).
+  async put(path, text) {
+    await put(path, text, { access, addRandomSuffix: false, allowOverwrite: true, contentType: 'text/plain', cacheControlMaxAge: 60, ttlDays: KEEP_DAYS });
+  },
+  async list(prefix) {
+    const paths = [];
+    let cursor;
+    do {
+      const page = await list({ prefix, cursor, limit: 1000 });
+      for (const b of page.blobs) paths.push(b.pathname);
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+    return paths;
+  },
+  async removeMany(paths) {
+    for (let i = 0; i < paths.length; i += 500) await del(paths.slice(i, i + 500));
+  },
 };
 
 const enabled = !!process.env.BLOB_READ_WRITE_TOKEN;
