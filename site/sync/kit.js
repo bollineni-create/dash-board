@@ -426,6 +426,24 @@
       try { note(); } catch (e) { /* the app isn't ready to be read yet; the first sync reads it */ }
       return true;
     }
+    // `unapplied`: another page merged other devices into the save while this app was closed, so
+    // the save is ahead of the screen. Show it before any further edit, including when the server
+    // can't be reached, so those edits don't land on the older copy still on screen.
+    async function applyUnapplied() {
+      if (!meta || !meta.unapplied) return;
+      const shown = view(meta.doc, cols, o.clean);
+      applying++;
+      missed = false;
+      let wrote = false;
+      try { await o.write(shown); wrote = true; } catch (e) { /* the next pull writes it */ } finally { applying--; }
+      if (!wrote) return;
+      meta.unapplied = false;
+      // The write is not a local edit. A change made while it ran is.
+      if (missed) { missed = false; meta.shadow = shown; try { note(); } catch (e) { /* the app isn't ready to be read yet */ } }
+      else { try { meta.shadow = o.read(); } catch (e) { meta.shadow = shown; } }
+      await persist();
+      try { if (o.onApplied) o.onApplied(); } catch (e) { /* the app's own problem */ }
+    }
     function remember() {
       const d = device();
       // A new app on this device: check in again so the device list shows it.
@@ -443,7 +461,10 @@
         if (meta && !normalizeCode(meta.code)) meta = null;
         const code = site.code();
         if (code && adopt(code)) await persist();
-        else if (meta && meta.code === code && note()) { meta.dirty = true; await persist(); }
+        else if (meta && meta.code === code) {
+          try { if (note()) { meta.dirty = true; await persist(); } } catch (e) { /* the app isn't ready to be read yet; the first sync reads it */ }
+        }
+        if (code && meta && meta.code === code) await applyUnapplied();
         server = await available();
         if (server && !server.apps.includes(o.app)) server = null;
         tell(phase);
