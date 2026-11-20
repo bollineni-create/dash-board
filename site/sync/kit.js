@@ -298,7 +298,7 @@
     let timer = null, pending = false;
     const listeners = new Set();
 
-    const persist = () => (meta ? idb.set(metaKey, meta) : idb.remove(metaKey));
+    const persist = () => { if (meta) meta.savedAt = Date.now(); return meta ? idb.set(metaKey, meta) : idb.remove(metaKey); };
     const tell = (p, err) => { phase = p; problem = err || null; if (o.onStatus) o.onStatus(); listeners.forEach((fn) => fn()); };
     const status = () => ({ available: !!server, on: !!meta, code: meta ? formatCode(meta.code) : null, phase, problem, syncedAt: meta ? meta.syncedAt || null : null });
     const serial = (job) => { const run = queue.then(job, job); queue = run.catch(() => {}); return run; };
@@ -315,7 +315,9 @@
       const merged = merge(meta.doc, remote, now());
       const shown = view(merged, cols, o.clean);
       let wrote = false;
-      if (!same(shown, view(meta.doc, cols, o.clean)) || !meta.version) {
+      // `unapplied`: another page sent this app's changes and merged other devices' into the save
+      // while the app was closed, so what the save holds isn't on screen yet.
+      if (!same(shown, view(meta.doc, cols, o.clean)) || !meta.version || meta.unapplied) {
         applying++;
         missed = false;
         try { await o.write(shown); } finally { applying--; }
@@ -323,6 +325,7 @@
         if (o.onApplied) o.onApplied();
       }
       meta.doc = merged;
+      meta.unapplied = false;
       meta.version = version;
       meta.dirty = !same(merged, remote);
       // A change made while the write ran was not recorded (changed() can't tell it from the
@@ -365,7 +368,7 @@
         }
         return push(3);
       }
-      if (r.data.version !== meta.version) {
+      if (r.data.version !== meta.version || meta.unapplied) {
         let remote;
         try { remote = await open(keys.key, r.data.payload); } catch (e) { throw failure('unreadable', MESSAGES.unreadable); }
         await fold(remote, r.data.version);
@@ -408,12 +411,20 @@
           if (meta) { meta = null; clearTimeout(timer); await persist(); tell('idle'); }
           return;
         }
-        if (!meta) meta = { code, version: null, doc: emptyDoc(), shadow: null, syncedAt: null, dirty: true };
-        else if (meta.code !== code) Object.assign(meta, { code, version: null, dirty: true });
-        else return;
+        if (!adopt(code)) return;
         await persist();
         tell('idle');
       }).then(() => (meta && server ? api.sync() : undefined));
+    }
+    // Follows the site's code and records what is on this device in the save, before any network
+    // request: a change made in the first moment after opening is then kept even if the page is
+    // closed straight away, and another page can send it. Returns whether anything changed.
+    function adopt(code) {
+      if (!meta) meta = { code, version: null, doc: emptyDoc(), shadow: null, syncedAt: null, dirty: true };
+      else if (meta.code !== code) Object.assign(meta, { code, version: null, dirty: true });
+      else return false;
+      try { note(); } catch (e) { /* the app isn't ready to be read yet; the first sync reads it */ }
+      return true;
     }
     function remember() {
       const d = device();
@@ -430,6 +441,9 @@
         started = true;
         meta = (await idb.get(metaKey)) || null;
         if (meta && !normalizeCode(meta.code)) meta = null;
+        const code = site.code();
+        if (code && adopt(code)) await persist();
+        else if (meta && meta.code === code && note()) { meta.dirty = true; await persist(); }
         server = await available();
         if (server && !server.apps.includes(o.app)) server = null;
         tell(phase);
@@ -485,10 +499,12 @@
   // (the phone locked, the tab switched) any page on the site can send it: the document is already
   // complete and encrypted here. If another device changed the same app meanwhile, it is left for
   // the app itself to merge the next time it opens.
-  let flushedOthers = false;
-  async function flushOthers() {
-    if (flushedOthers) return;
-    flushedOthers = true;
+  let flushing = null;
+  function flushOthers() {
+    if (!flushing) flushing = flushOthersNow().catch(() => {}).finally(() => { flushing = null; });
+    return flushing;
+  }
+  async function flushOthersNow() {
     const code = site.code();
     const s = await available();
     if (!code || !s) return;
@@ -496,14 +512,26 @@
     for (const app of s.apps) {
       if (app === 'site' || app === 'gridline' || running.has(app)) continue;
       const meta = await idb.get('app:' + app);
-      if (!meta || !meta.dirty || meta.code !== code || !meta.version) continue;
+      // Left alone: nothing unsent, another code, or saved in the last few seconds (the app may be
+      // open in another tab or frame right now and sending it itself).
+      if (!meta || !meta.dirty || meta.code !== code || Date.now() - (meta.savedAt || 0) < 5000) continue;
       try {
         const keys = await derive(code);
-        const r = await request(code, 'PUT', app, { payload: await seal(keys.key, meta.doc), base: meta.version });
+        let doc = meta.doc, base = meta.version || null, unapplied = !!meta.unapplied;
+        const cur = await request(code, 'GET', app);
+        if (cur.status === 404) {
+          if (meta.version) continue; // erased from another device: the app sorts that out itself
+        } else if (cur.data.version !== meta.version) {
+          // Another device changed it too: merge, the same way the app would.
+          doc = merge(meta.doc, await open(keys.key, cur.data.payload), Date.now());
+          base = cur.data.version;
+          unapplied = true;
+        }
+        const r = await request(code, 'PUT', app, { payload: await seal(keys.key, doc), base });
         if (r.status !== 200) continue;
-        const now = (await idb.get('app:' + app)) || meta;
-        if (now.version !== meta.version) continue; // the app itself saved meanwhile
-        await idb.set('app:' + app, { ...now, version: r.data.version, dirty: false, syncedAt: Date.now() });
+        const now = await idb.get('app:' + app);
+        if (!now || now.savedAt !== meta.savedAt) continue; // the app itself saved meanwhile
+        await idb.set('app:' + app, { ...now, doc, version: r.data.version, dirty: false, unapplied, syncedAt: Date.now(), savedAt: Date.now() });
       } catch (e) { /* the app sends it when it next opens */ }
     }
   }
