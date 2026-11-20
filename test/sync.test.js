@@ -122,9 +122,9 @@ test('a save that is malformed or too large is refused', async () => {
 
 test('status says whether sync is set up, without a code', async () => {
   const on = await call(createHandler(makeStore(memoryBlob())), { route: 'status', id: null, site: null });
-  assert.deepEqual(on.data, { sync: true, apps: ['gridline'] });
+  assert.deepEqual(on.data, { sync: true, apps: Object.keys(APPS), parts: ['loom'] });
   const off = createHandler(null);
-  assert.deepEqual((await call(off, { route: 'status', id: null, site: null })).data, { sync: false, apps: [] });
+  assert.deepEqual((await call(off, { route: 'status', id: null, site: null })).data, { sync: false, apps: [], parts: [] });
   assert.equal((await call(off)).code, 503);
 });
 
@@ -255,4 +255,44 @@ test('a version read back marked weak still works for the next save', async () =
   assert.equal(renewed.data.version, blob.files.get(path).version);
   assert.equal(plainVersion('W/"a"'), '"a"');
   assert.equal(plainVersion(null), null);
+});
+
+test('file parts: stored only by a code that has a save, read back, and removed by name', async () => {
+  const blob = memoryBlob();
+  const handler = createHandler(makeStore(blob, 'production'));
+  const PART = 'c'.repeat(64);
+  const route = `loom/part/${PART}`;
+  // No save for loom under this code yet: a part can't start a code.
+  assert.equal((await call(handler, { method: 'PUT', route, body: { payload: 'chunk' } })).code, 409);
+  assert.equal((await call(handler, { method: 'PUT', route: 'loom', body: { payload: 'library', base: null } })).code, 200);
+  assert.equal((await call(handler, { method: 'PUT', route, body: { payload: 'chunk' } })).code, 200);
+  // Writing the same part again is fine (a retry after a dropped connection).
+  assert.equal((await call(handler, { method: 'PUT', route, body: { payload: 'chunk' } })).code, 200);
+  const read = await call(handler, { route });
+  assert.equal(read.code, 200);
+  assert.equal(read.data.payload, 'chunk');
+  // The part's name, not the code, is what finds it, so a new code still reads it.
+  assert.equal((await call(handler, { route, id: OTHER })).data.payload, 'chunk');
+  assert.ok(![...blob.files.keys()].some((k) => k.includes(ID)));
+  assert.equal((await call(handler, { method: 'DELETE', route })).code, 200);
+  assert.equal((await call(handler, { route })).code, 404);
+});
+
+test('file parts: only for apps that have them, with a valid name, within the size limit', async () => {
+  const handler = createHandler(makeStore(memoryBlob(), 'production'));
+  await call(handler, { method: 'PUT', route: 'loom', body: { payload: 'library', base: null } });
+  await call(handler, { method: 'PUT', route: 'gridline', body: { payload: 'saves', base: null } });
+  const PART = 'd'.repeat(64);
+  for (const route of [`gridline/part/${PART}`, 'loom/part/xyz', `loom/part/${PART}/more`, `loom/thing/${PART}`, `loom/part/${'D'.repeat(64)}`]) {
+    assert.equal((await call(handler, { route })).code, 404, route);
+  }
+  assert.equal((await call(handler, { method: 'PUT', route: `loom/part/${PART}`, body: { payload: 'x'.repeat(4_100_001) } })).code, 413);
+  assert.equal((await call(handler, { method: 'PUT', route: `loom/part/${PART}`, body: {} })).code, 400);
+});
+
+test('status lists every app that syncs and the ones with file parts', async () => {
+  const handler = createHandler(makeStore(memoryBlob(), 'production'));
+  const r = await call(handler, { route: 'status', id: null, site: null });
+  assert.deepEqual(r.data.apps.sort(), ['ballast', 'gridline', 'loom', 'palimpsest', 'site']);
+  assert.deepEqual(r.data.parts, ['loom']);
 });
