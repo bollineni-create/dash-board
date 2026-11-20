@@ -588,7 +588,10 @@
 
   /* ---------- Files, in encrypted parts ---------- */
 
-  const PART_BYTES = 3 * 1048576; // 3 MB of file per part: about 4 MB once encrypted and in base64
+  // File bytes per part. Sealed (12-byte IV + 16-byte tag) and in base64 it must stay under the
+  // server's PARTS limit (4,100,000 characters) and Vercel's 4.5 MB request cap: 3,000,000 bytes
+  // come to 4,000,040 characters. (3 MiB came to 4,194,344, so every file over 3 MB was refused.)
+  const PART_BYTES = 3_000_000;
 
   // Uploads a file (Blob) for `app`. Returns the entry to keep in the app's `files` collection:
   // { k: key, b: name base, n: parts, size, type }. Needs sync to be on.
@@ -906,7 +909,7 @@
   const api = {
     newCode, normalizeCode, formatCode, derive, seal, open, emptyDoc, stamp, merge, view, same, canonical,
     site, available, createEngine, readDoc, listDevices, turnOn, link, unlink, changeCode, eraseAll,
-    putFile, getFile, removeFile, validFile, takeLinkFromAddress, openPanel, mountButton, MESSAGES,
+    putFile, getFile, removeFile, validFile, PART_BYTES, takeLinkFromAddress, openPanel, mountButton, MESSAGES,
     // Apps register their engine so the panel can show it and sync it.
     register(engine, name) { const e = { engine, name }; engines.add(e); return () => engines.delete(e); },
   };

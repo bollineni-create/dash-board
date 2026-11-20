@@ -64,3 +64,12 @@ test('file entries are checked before a file is fetched', () => {
   assert.ok(!Kit.validFile({ k: 'short', b: 'a'.repeat(64), n: 2, size: 10, type: '' }));
   assert.ok(!Kit.validFile({ k: 'A'.repeat(43) + '=', b: 'a'.repeat(64), n: 0, size: 10, type: '' }));
 });
+
+test('a full file part, sealed and in base64, fits what the server takes and one Vercel request', async () => {
+  const { PARTS } = await import('../lib/sync.js');
+  const key = await crypto.subtle.importKey('raw', crypto.getRandomValues(new Uint8Array(32)), 'AES-GCM', false, ['encrypt']);
+  const sealed = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: new Uint8Array(12) }, key, new Uint8Array(Kit.PART_BYTES));
+  const chars = Math.ceil((12 + sealed.byteLength) / 3) * 4;
+  assert.ok(chars <= PARTS.loom, `${chars} characters is over the server's ${PARTS.loom}`);
+  assert.ok(JSON.stringify({ payload: 'x'.repeat(chars) }).length < 4.5 * 1024 * 1024, 'over Vercel’s 4.5 MB request cap');
+});
