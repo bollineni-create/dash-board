@@ -203,6 +203,8 @@
         headers: Object.assign({ Authorization: 'Bearer ' + id }, body ? { 'Content-Type': 'application/json' } : {}),
         body: body ? JSON.stringify(body) : undefined,
         cache: 'no-store',
+        // A small save can outlive the page that sent it (leaving, or locking the phone).
+        keepalive: !!body && JSON.stringify(body).length < 60000,
       });
     } catch (e) { throw failure('offline', MESSAGES.offline); }
     const data = await r.json().catch(() => null);
@@ -293,7 +295,7 @@
     let meta = null; // { code, version, doc, shadow, syncedAt, dirty }
     let phase = 'idle', problem = null, applying = 0, started = false, server = null, missed = false;
     let queue = Promise.resolve();
-    let timer = null;
+    let timer = null, pending = false;
     const listeners = new Set();
 
     const persist = () => (meta ? idb.set(metaKey, meta) : idb.remove(metaKey));
@@ -444,9 +446,20 @@
         root.addEventListener('focus', go);
         // Back online: send what was saved while offline right away.
         root.addEventListener('online', () => { last = 0; go(); });
-        setInterval(go, 3 * 60000);
+        setInterval(go, 60000);
+        // Leaving the page or locking the phone: send a change still waiting out its delay now,
+        // so it reaches the other devices without waiting for this one to be opened again.
+        const flush = () => {
+          if (!pending || !meta) return;
+          clearTimeout(timer);
+          pending = false;
+          run(() => push(3)).catch(() => {});
+        };
+        document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+        root.addEventListener('pagehide', flush);
         await reconcile().catch(() => {});
         touchDevice();
+        flushOthers().catch(() => {});
       },
       // The app calls this after every change to what it saves.
       changed() {
@@ -455,7 +468,8 @@
         if (!note()) return;
         persist();
         clearTimeout(timer);
-        timer = setTimeout(() => { run(() => push(3)).catch(() => {}); }, o.delay == null ? 1500 : o.delay);
+        pending = true;
+        timer = setTimeout(() => { pending = false; run(() => push(3)).catch(() => {}); }, o.delay == null ? 1500 : o.delay);
       },
       sync() { return meta ? run(pull) : Promise.resolve(); },
       // The document as last synced (for an app that keeps extra bookkeeping, like Loom's files).
@@ -463,6 +477,35 @@
       code() { return meta ? meta.code : null; },
     };
     return api;
+  }
+
+  /* ---------- Changes another app left unsent ---------- */
+
+  // An app notes each change in its saved document before it sends it, so if it was closed first
+  // (the phone locked, the tab switched) any page on the site can send it: the document is already
+  // complete and encrypted here. If another device changed the same app meanwhile, it is left for
+  // the app itself to merge the next time it opens.
+  let flushedOthers = false;
+  async function flushOthers() {
+    if (flushedOthers) return;
+    flushedOthers = true;
+    const code = site.code();
+    const s = await available();
+    if (!code || !s) return;
+    const running = new Set([...engines].map((e) => e.engine.app));
+    for (const app of s.apps) {
+      if (app === 'site' || app === 'gridline' || running.has(app)) continue;
+      const meta = await idb.get('app:' + app);
+      if (!meta || !meta.dirty || meta.code !== code || !meta.version) continue;
+      try {
+        const keys = await derive(code);
+        const r = await request(code, 'PUT', app, { payload: await seal(keys.key, meta.doc), base: meta.version });
+        if (r.status !== 200) continue;
+        const now = (await idb.get('app:' + app)) || meta;
+        if (now.version !== meta.version) continue; // the app itself saved meanwhile
+        await idb.set('app:' + app, { ...now, version: r.data.version, dirty: false, syncedAt: Date.now() });
+      } catch (e) { /* the app sends it when it next opens */ }
+    }
   }
 
   /* ---------- Devices: the launcher's own small document ---------- */
@@ -928,7 +971,7 @@
 
   const api = {
     newCode, normalizeCode, formatCode, derive, seal, open, emptyDoc, stamp, merge, view, same, canonical,
-    site, available, createEngine, readDoc, listDevices, turnOn, link, unlink, changeCode, eraseAll,
+    site, available, createEngine, readDoc, listDevices, flushOthers, turnOn, link, unlink, changeCode, eraseAll,
     putFile, getFile, removeFile, validFile, PART_BYTES, takeLinkFromAddress, openPanel, mountButton, MESSAGES,
     // Apps register their engine so the panel can show it and sync it.
     register(engine, name) { const e = { engine, name }; engines.add(e); return () => engines.delete(e); },
