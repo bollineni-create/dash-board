@@ -444,8 +444,13 @@
         };
         document.addEventListener('visibilitychange', go);
         root.addEventListener('focus', go);
-        // Back online: send what was saved while offline right away.
-        root.addEventListener('online', () => { last = 0; go(); });
+        // Back online: send what was saved while offline right away. A background tab still
+        // receives this, and go() would skip it while the document is hidden.
+        root.addEventListener('online', () => {
+          if (!meta) { last = 0; return; }
+          last = Date.now();
+          api.sync().catch(() => {});
+        });
         setInterval(go, 60000);
         // Leaving the page or locking the phone: send a change still waiting out its delay now,
         // so it reaches the other devices without waiting for this one to be opened again.
