@@ -971,7 +971,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       if (!ok) return;
       btn.hidden = false;
       draw();
-      if (S.site.code()) S.listDevices().catch(function () {});
+      if (S.site.code()) { S.listDevices().catch(function () {}); S.flushOthers().catch(function () {}); }
       if (!code) return;
       var apps = document.getElementById('apps');
       if (apps) apps.scrollIntoView({ behavior: 'instant' });
