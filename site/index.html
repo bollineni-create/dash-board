@@ -170,6 +170,10 @@ dd { margin: 0; color: var(--body); }
 .start svg { width: 13px; height: 13px; }
 .start:focus-visible { outline-color: var(--paper); }
 .ghost { font-size: 14.5px; font-weight: 500; color: var(--night-quiet); }
+.syncbtn { grid-column: span 2; justify-self: end; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #3a3a3a; background: transparent; color: var(--paper); font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.syncbtn:hover { border-color: var(--paper); }
+.syncbtn i { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+.syncbtn[data-on] i { background: #3ddc84; }
 .ghost:hover { color: var(--paper); }
 .pitch.swap > * { animation: lift .45s var(--ease) both; }
 .pitch.swap > :nth-child(2) { animation-delay: .03s; } .pitch.swap > :nth-child(3) { animation-delay: .06s; } .pitch.swap > :nth-child(4) { animation-delay: .09s; } .pitch.swap > :nth-child(5) { animation-delay: .12s; }
@@ -266,6 +270,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .split > h2 { position: static; padding: 0 0 18px; }
   .night { margin-top: 80px; padding: 64px 0; }
   .night-top h2, .night-top p { grid-column: 1 / -1; }
+  .syncbtn { grid-column: 1 / -1; justify-self: start; }
   /* Tabs become a row of icons; the card moves under the text and shows the top of the app. */
   .shelf { display: flex; }
   .tab { flex: 0 1 64px; justify-content: center; padding: 10px 0 12px; }
@@ -505,6 +510,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       <div class="night-top">
         <h2 class="wide">Apps</h2>
         <p>Browser apps I design and ship myself, installable on a phone and tuned for the iPhone Duo. <span class="noprint">Pick one and press Start: it opens right here.</span></p>
+        <button class="syncbtn noprint" id="syncBtn" type="button" hidden><i></i><span>Sync devices</span></button>
       </div>
       <div class="launcher" id="launcher">
         <nav class="shelf" id="shelf" aria-label="Apps">
@@ -945,6 +951,37 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     near.observe($('launcher'));
   } else arm();
 })();
+</script>
+<script src="/sync/kit.js" defer></script>
+<script>
+  // Sync: one link for every app here, on every device. Opening a shared link
+  // (bollineni.co/#link=CODE) links this device and shows the panel.
+  addEventListener('DOMContentLoaded', function () {
+    var S = window.BollineniSync, btn = document.getElementById('syncBtn');
+    if (!S || !btn) return;
+    var draw = function () {
+      var on = !!S.site.code();
+      btn.toggleAttribute('data-on', on);
+      btn.querySelector('span').textContent = on ? 'Synced devices' : 'Sync devices';
+    };
+    S.site.onChange(draw);
+    btn.addEventListener('click', function () { S.openPanel({ tint: '#ffffff' }); });
+    var code = S.takeLinkFromAddress();
+    S.available().then(function (ok) {
+      if (!ok) return;
+      btn.hidden = false;
+      draw();
+      if (S.site.code()) S.listDevices().catch(function () {});
+      if (!code) return;
+      var apps = document.getElementById('apps');
+      if (apps) apps.scrollIntoView({ behavior: 'instant' });
+      var p = code === S.site.code() ? Promise.resolve() : S.link(code);
+      p.then(function () { S.openPanel({ tint: '#ffffff' }); }, function (e) {
+        S.openPanel({ tint: '#ffffff' });
+        setTimeout(function () { var m = document.querySelector('.bsync .msg'); if (m) { m.textContent = e.message; m.classList.add('bad'); } }, 300);
+      });
+    });
+  });
 </script>
 </body>
 </html>
