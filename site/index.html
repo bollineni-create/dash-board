@@ -971,7 +971,14 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       if (!ok) return;
       btn.hidden = false;
       draw();
-      if (S.site.code()) { S.listDevices().catch(function () {}); S.flushOthers().catch(function () {}); }
+      if (S.site.code()) S.listDevices().catch(function () {});
+      // Changes an app made just before it was closed are sent from here (apps open over this page).
+      var flush = function () { if (!document.hidden && S.site.code()) S.flushOthers(); };
+      flush();
+      setTimeout(flush, 6000); // an app closed a moment ago: its save is left alone for 5 s, then sent
+      document.addEventListener('visibilitychange', flush);
+      addEventListener('focus', flush);
+      setInterval(flush, 15000);
       if (!code) return;
       var apps = document.getElementById('apps');
       if (apps) apps.scrollIntoView({ behavior: 'instant' });
