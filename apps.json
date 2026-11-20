@@ -82,7 +82,12 @@
     "name": "Loom",
     "repo": "https://github.com/bollineni-create/blank.git",
     "root": "web",
-    "files": ["index.html", "css", "js", "assets"],
+    "files": [
+      "index.html",
+      "css",
+      "js",
+      "assets"
+    ],
     "icon": "web/assets/icon.png",
     "installIcon": "web/assets/icon-512.png",
     "kind": "Second brain · notes & links",
@@ -100,7 +105,10 @@
     "name": "PDT App",
     "repo": "https://github.com/bollineni-create/projectdowntowntampa-ios.git",
     "root": "web",
-    "files": ["index.html", "assets"],
+    "files": [
+      "index.html",
+      "assets"
+    ],
     "icon": "web/assets/icon.png",
     "installIcon": "web/assets/icon-512.png",
     "kind": "Archived · iOS volunteer app",
@@ -113,5 +121,26 @@
     "tint": "#0199F5",
     "wash": "#04202F",
     "archived": true
+  },
+  {
+    "id": "bridge",
+    "name": "Bridge",
+    "repo": "https://github.com/bollineni-create/bridge.git",
+    "root": "web",
+    "files": [
+      "index.html",
+      "assets"
+    ],
+    "icon": "web/assets/icon.png",
+    "installIcon": "web/assets/icon-1024.png",
+    "kind": "AI runners · Mac + iPhone",
+    "pitch": "One board for two Claude accounts and a model on my Mac: what each is doing, what only I can decide, and work handed off in a line.",
+    "chips": [
+      "Native SwiftUI",
+      "Mac + foldable iPhone",
+      "Local model first"
+    ],
+    "tint": "#D62E1F",
+    "wash": "#1F0806"
   }
 ]
