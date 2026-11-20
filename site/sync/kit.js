@@ -291,7 +291,7 @@
     const metaKey = 'app:' + o.app;
     const cols = o.collections;
     let meta = null; // { code, version, doc, shadow, syncedAt, dirty }
-    let phase = 'idle', problem = null, applying = 0, started = false, server = null;
+    let phase = 'idle', problem = null, applying = 0, started = false, server = null, missed = false;
     let queue = Promise.resolve();
     let timer = null;
     const listeners = new Set();
@@ -311,15 +311,23 @@
     async function fold(remote, version) {
       note();
       const merged = merge(meta.doc, remote, now());
-      if (!same(view(merged, cols, o.clean), view(meta.doc, cols, o.clean)) || !meta.version) {
+      const shown = view(merged, cols, o.clean);
+      let wrote = false;
+      if (!same(shown, view(meta.doc, cols, o.clean)) || !meta.version) {
         applying++;
-        try { await o.write(view(merged, cols, o.clean)); } finally { applying--; }
+        missed = false;
+        try { await o.write(shown); } finally { applying--; }
+        wrote = true;
         if (o.onApplied) o.onApplied();
       }
       meta.doc = merged;
-      meta.shadow = o.read();
       meta.version = version;
       meta.dirty = !same(merged, remote);
+      // A change made while the write ran was not recorded (changed() can't tell it from the
+      // write's own). Compare against what was written, so it is stamped and sent, not taken as
+      // already synced.
+      if (wrote && missed) { missed = false; meta.shadow = shown; note(); }
+      else meta.shadow = o.read();
     }
     async function push(tries) {
       const keys = await derive(meta.code);
@@ -363,6 +371,7 @@
       if (meta.dirty) await push(3);
       else meta.syncedAt = now();
     }
+    let retryIn = 0, retryTimer = null;
     function run(job) {
       return serial(async () => {
         if (!meta || !server) return;
@@ -370,6 +379,7 @@
         try {
           await job();
           await persist();
+          retryIn = 0; clearTimeout(retryTimer);
           tell('idle');
         } catch (e) {
           await persist();
@@ -377,6 +387,13 @@
           if (e && !e.reason) console.warn('sync', o.app, e);
           tell(shown.reason === 'erased' ? 'idle' : 'error', shown);
           if (o.onProblem) o.onProblem(shown);
+          // Offline or rate-limited: try again by itself (15 s, doubling to 2 min) instead of
+          // leaving this device's changes unsent until the page is next focused.
+          if (meta && (shown.reason === 'offline' || shown.reason === 'rate_limited')) {
+            retryIn = Math.min(retryIn ? retryIn * 2 : 15000, 120000);
+            clearTimeout(retryTimer);
+            retryTimer = setTimeout(() => { api.sync().catch(() => {}); }, retryIn);
+          }
           throw shown;
         }
       });
@@ -425,13 +442,16 @@
         };
         document.addEventListener('visibilitychange', go);
         root.addEventListener('focus', go);
+        // Back online: send what was saved while offline right away.
+        root.addEventListener('online', () => { last = 0; go(); });
         setInterval(go, 3 * 60000);
         await reconcile().catch(() => {});
         touchDevice();
       },
       // The app calls this after every change to what it saves.
       changed() {
-        if (!meta || applying) return;
+        if (!meta) return;
+        if (applying) { missed = true; return; }
         if (!note()) return;
         persist();
         clearTimeout(timer);
