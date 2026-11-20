@@ -105,6 +105,9 @@
     },
     "api/loom.js": {
       "maxDuration": 60
+    },
+    "api/relay.js": {
+      "maxDuration": 30
     }
   }
 }

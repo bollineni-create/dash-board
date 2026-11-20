@@ -6,6 +6,7 @@
 const UPSTREAMS = { visor: 'https://api.visor.vin', autodev: 'https://api.auto.dev' };
 const PATHS = { visor: /^\/v1\/[A-Za-z0-9_\-/.%]+$/, autodev: /^\/(listings|photos)(\/[A-Za-z0-9]{1,17})?$/ };
 const ENV_KEYS = { visor: 'VISOR_KEY', autodev: 'AUTODEV_KEY' };
+const UPSTREAM_TIMEOUT_MS = Number(process.env.RELAY_TIMEOUT_MS) || 15000;
 const LIMIT_PER_MIN = Number(process.env.RELAY_LIMIT_PER_MIN) || 30;
 
 const hits = new Map(); // ip -> [windowStart, count]; per instance, so it's a soft limit
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
 
   try {
     const qs = url.searchParams.toString();
-    const up = await fetch(UPSTREAMS[provider] + apiPath + (qs ? '?' + qs : ''), { headers: { Authorization: `Bearer ${key}` } });
+    const up = await fetch(UPSTREAMS[provider] + apiPath + (qs ? '?' + qs : ''), { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
     const body = Buffer.from(await up.arrayBuffer());
     res.setHeader('Content-Type', up.headers.get('content-type') || 'application/json');
     // Shared-key answers are cached at the edge for 30 minutes; answers made with a visitor's own key never are.
@@ -54,6 +55,8 @@ export default async function handler(req, res) {
     for (const h of ['x-usage-cost-micros', 'x-ratelimit-remaining-60s', 'retry-after']) if (up.headers.get(h)) res.setHeader(h, up.headers.get(h));
     res.status(up.status).send(body);
   } catch (e) {
+    // A hung upstream used to hold the function open until Vercel killed it at 300 s.
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') return fail(res, 504, 'The listings API took too long to answer. Try again.');
     fail(res, 502, `Could not reach the listings API: ${e.message}`);
   }
 }
