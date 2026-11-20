@@ -12,16 +12,24 @@
       "destination": "/api/ballast?route=:route*"
     },
     {
-      "source": "/rounds/api/:route*",
-      "destination": "/api/rounds?route=:route*"
-    },
-    {
       "source": "/loom/api/:route*",
       "destination": "/api/loom?route=:route*"
     },
     {
       "source": "/sync/api/:route*",
       "destination": "/api/sync?route=:route*"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/rounds",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/rounds/:path*",
+      "destination": "/",
+      "permanent": false
     }
   ],
   "headers": [
@@ -99,9 +107,6 @@
   "functions": {
     "api/ballast.js": {
       "maxDuration": 120
-    },
-    "api/rounds.js": {
-      "maxDuration": 30
     },
     "api/loom.js": {
       "maxDuration": 60
