@@ -8,7 +8,15 @@
 <!-- Shared from LinkedIn only: kept out of search engines (vercel.json also sends X-Robots-Tag). -->
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="theme-color" content="#FFFFFF">
-<meta name="color-scheme" content="light only">
+<meta name="color-scheme" content="light dark">
+<script>
+  // Light or dark before the first paint: the choice made with the switch in the top bar, else the device's.
+  (function () {
+    var t; try { t = localStorage.getItem('theme'); } catch (e) {}
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
@@ -51,6 +59,8 @@
 <link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* Swiss Tombstone: white page, black type, one red accent, deal-tombstone stat boxes.
+   Dark: the same page in negative (near-black paper, off-white type, a brighter red so it keeps its
+   contrast). It follows the device, or the switch at the left of the top bar, which remembers the choice.
    One typeface (Archivo, served from /fonts) in two widths: wide and heavy for the name,
    the figures and the headings; regular for reading. The only other colour on the page
    belongs to the apps: in the launcher at the bottom, the chosen app shows in its own tint. */
@@ -60,6 +70,22 @@
   --night-line: #303030; --night-quiet: #A8A8A8; --night-body: #DADADA; --tint: #fff; --wash: #1a1a1a; --ease: cubic-bezier(.32,.72,0,1);
   --sans: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --side: max(32px, env(safe-area-inset-left), env(safe-area-inset-right)); --bar: 57px; }
+:root[data-theme="dark"] { color-scheme: dark; --ink: #F2F2F0; --body: #CFCFCC; --quiet: #9C9C98; --paper: #0B0B0B; --red: #F2492F; }
+/* Without the script (it sets data-theme before paint), the device decides. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) { color-scheme: dark; --ink: #F2F2F0; --body: #CFCFCC; --quiet: #9C9C98; --paper: #0B0B0B; --red: #F2492F; }
+}
+/* The Apps room is black in both: it is drawn in --ink and --paper, so it keeps its own pair.
+   In dark it lifts a step off the near-black page so it still reads as a room. */
+.night { --ink: #000; --paper: #fff; --red: #D62E1F; }
+:root[data-theme="dark"] .night { --ink: #161616; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) .night { --ink: #161616; } }
+/* The switch: a contrast mark, half ink and half paper, at the left of the top bar. */
+.mode { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin-left: -8px; padding: 0; border: 0; background: none; color: var(--ink); cursor: pointer; }
+.mode i { width: 11px; height: 11px; border: 1.5px solid currentColor; border-radius: 50%; background: linear-gradient(90deg, currentColor 50%, transparent 50%); transition: transform .45s var(--ease); }
+:root[data-theme="dark"] .mode i { transform: rotate(180deg); }
+.mode:hover { color: var(--red); }
+.bar .wrap > .lead { display: flex; align-items: center; gap: 10px; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: calc(var(--bar) + env(safe-area-inset-top) + 20px); }
@@ -294,6 +320,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   body { font-size: 16px; }
   .bar .wrap { min-height: 47px; font-size: 13.5px; }
   .brand { display: none; }
+  .bar .wrap { gap: 14px; }
   .bar nav { flex: 1; min-width: 0; justify-content: space-between; gap: 12px; overflow-x: auto; scrollbar-width: none; }
   .bar nav a { padding: 13px 0; }
   .hero { padding-top: 28px; }
@@ -369,6 +396,9 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 /* Printing (Cmd/Ctrl+P): compact, ink-only */
 @media print {
   @page { margin: 13mm; }
+  /* paper is white whatever the screen shows */
+  :root, :root[data-theme="dark"] { color-scheme: light; --ink: #000; --body: #262626; --quiet: #5E5E5E; --paper: #fff; --red: #D62E1F; }
+  .mode { display: none !important; }
   body { font-size: 9.5pt; line-height: 1.38; }
   .wrap { padding: 0; max-width: none; }
   .bar, .actions, .noprint, footer, .stage, .rail, .icon, .contact { display: none !important; }
@@ -398,7 +428,10 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 <a class="sr skip" href="#main">Skip to content</a>
 <header class="bar">
   <div class="wrap">
-    <a class="brand" href="#top">bollineni.co</a>
+    <div class="lead">
+      <button class="mode" type="button" aria-label="Dark mode" aria-pressed="false" title="Dark mode"><i aria-hidden="true"></i></button>
+      <a class="brand" href="#top">bollineni.co</a>
+    </div>
     <nav aria-label="Sections">
       <a href="#experience">Experience</a>
       <a href="#research">Research</a>
@@ -712,7 +745,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     // Until the app's own colour can be read (still loading, or another origin), use its launcher wash, not black.
     var c = id ? (bgOf(id) || hexToRgb(APPS[id].wash)) : '';
     if (c) root.style.setProperty('--app-bg', c); else root.style.removeProperty('--app-bg');
-    themeMeta.content = c || (id ? '#000000' : themeDefault);
+    themeMeta.content = c || (id ? '#000000' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#0B0B0B' : themeDefault));
     var tone = toneOf(c);
     if (tone) winbar.dataset.tone = tone; else delete winbar.dataset.tone;
   }
@@ -1046,8 +1079,29 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     addEventListener('load', soon);
     // an app opening or closing, or changing its own colour, changes the classes and --app-bg on <html>
     // (this script no longer writes to <html>, so the observer cannot wake itself)
-    new MutationObserver(soon).observe(root, { attributes: true, attributeFilter: ['class', 'style'] });
+    new MutationObserver(soon).observe(root, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
     soon();
+  })();
+</script>
+<script>
+  // The light/dark switch. A choice that matches the device is forgotten, so the page goes back to following it.
+  (function () {
+    var root = document.documentElement, btn = document.querySelector('.mode'), mq = matchMedia('(prefers-color-scheme: dark)');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    function show(t) {
+      root.setAttribute('data-theme', t);
+      btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+      btn.title = t === 'dark' ? 'Light mode' : 'Dark mode';
+      if (!root.classList.contains('app-open')) meta.content = t === 'dark' ? '#0B0B0B' : '#FFFFFF';
+    }
+    function saved() { try { return localStorage.getItem('theme'); } catch (e) { return null; } }
+    show(root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+    btn.addEventListener('click', function () {
+      var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      try { if ((t === 'dark') === mq.matches) localStorage.removeItem('theme'); else localStorage.setItem('theme', t); } catch (e) {}
+      show(t);
+    });
+    mq.addEventListener('change', function (e) { var s = saved(); if (s !== 'light' && s !== 'dark') show(e.matches ? 'dark' : 'light'); });
   })();
 </script>
 </body>
