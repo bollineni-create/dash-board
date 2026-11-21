@@ -1090,16 +1090,22 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       var open = root.classList.contains('app-open') && getComputedStyle(root).getPropertyValue('--app-bg').trim();
       var right = open || colourAt(innerWidth - 14, innerHeight / 2);
       var bottom = open || colourAt(innerWidth / 2, innerHeight - 14);
-      // only on a change: setting a style on <html> wakes the observer below
-      if (right !== last[0]) root.style.setProperty('--edge', right);
-      if (bottom !== last[1]) root.style.setProperty('--edge-b', bottom);
+      if (right === last[0] && bottom === last[1]) return;
       last = [right, bottom];
+      // Safari reads the strips once and does not notice a new colour on the same element, so each
+      // change puts fresh strips in the page, coloured from the start, and removes the old ones.
+      [['edge-r', right], ['edge-b', bottom]].forEach(function (p) {
+        var old = document.querySelector('.' + p[0]), el = document.createElement('div');
+        el.className = 'edge ' + p[0]; el.setAttribute('aria-hidden', 'true'); el.style.background = p[1];
+        if (old) old.replaceWith(el); else document.body.insertBefore(el, document.body.firstChild);
+      });
     }
     function soon() { if (!queued) { queued = true; requestAnimationFrame(paint); } }
     addEventListener('scroll', soon, { passive: true });
     addEventListener('resize', soon);
     addEventListener('load', soon);
     // an app opening or closing, or changing its own colour, changes the classes and --app-bg on <html>
+    // (this script no longer writes to <html>, so the observer cannot wake itself)
     new MutationObserver(soon).observe(root, { attributes: true, attributeFilter: ['class', 'style'] });
     soon();
   })();
