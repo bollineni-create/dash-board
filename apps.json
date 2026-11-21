@@ -41,8 +41,8 @@
       "Borders for every era",
       "Ask the guide"
     ],
-    "tint": "#F08A5D",
-    "wash": "#331A0F",
+    "tint": "#F0A93B",
+    "wash": "#2B1E06",
     "ownsEsc": true
   },
   {
@@ -74,8 +74,8 @@
       "Backtests on real prices",
       "Rebalancing plans"
     ],
-    "tint": "#2DD4BF",
-    "wash": "#0A2826"
+    "tint": "#7AA2FF",
+    "wash": "#0B1220"
   },
   {
     "id": "gridline",
@@ -126,8 +126,8 @@
       "Ask your library",
       "Stays in your browser"
     ],
-    "tint": "#E07A52",
-    "wash": "#1B1411"
+    "tint": "#A48CF7",
+    "wash": "#161029"
   },
   {
     "id": "pdt",
