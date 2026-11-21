@@ -194,6 +194,15 @@ dd { margin: 0; color: var(--body); }
   display: flex; flex-direction: column; overflow: hidden; background: #000; color: var(--w-ink); font-size: 14.5px; line-height: 1.5;
   transform-origin: 0 0; transform: var(--card, scale(.5)); clip-path: var(--clip, inset(0px 0px 0px 0px)); transition: transform .6s var(--ease), clip-path .6s var(--ease); will-change: transform; }
 .window.preview { pointer-events: none; }
+/* Safari's controls blend into the page. On the folded iPhone Duo they sit in a column down the right
+   and a bar along the bottom, and Safari colours them only from fixed or sticky elements within a few
+   pixels of that edge (it ignores theme-color). These two strips are that element: they always carry the
+   colour of whatever is beside them (set by the script below), so the column and the bar read as part
+   of the page. Real elements, not ::before/::after, which Safari does not sample. */
+.edge { position: fixed; z-index: 60; pointer-events: none; background: var(--edge, #fff); }
+.edge-r { top: 0; right: 0; bottom: 0; width: 8px; }
+.edge-b { left: 0; right: 0; bottom: 0; height: 8px; background: var(--edge-b, var(--edge, #fff)); }
+@media print { .edge { display: none; } }
 /* Open, the window wears the app's own colour: Safari tints its toolbars (down the right side and along the
    bottom on the iPhone Duo's front screen) from a fixed element at the edge, so a black window framed every app in black. */
 .window.open { position: fixed; z-index: 50; background: var(--app-bg, #000); }
@@ -232,7 +241,7 @@ html.app-open { background: var(--app-bg, #000); }
 /* Once the app has finished opening the resume is taken out of the picture as well. iOS Safari can leave
    a strip between the window and its toolbar; the resume showing through it would look like a tear.
    On screen only: printing with an app open still prints the resume. */
-@media screen { html.app-shown body { visibility: hidden; } html.app-shown .window.open, html.app-shown .rail { visibility: visible; } }
+@media screen { html.app-shown body { visibility: hidden; } html.app-shown .window.open, html.app-shown .rail, html.app-shown .edge { visibility: visible; } }
 /* An app that is up does not glide: when the split view comes on or goes off (unfolding the Duo), it is in its new place at once. */
 html.app-shown .window.open { transition: none; }
 /* A link straight to an app (bollineni.co/#gridline): keep the resume out of sight until the app is up. */
@@ -415,6 +424,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 </style>
 </head>
 <body>
+<div class="edge edge-r" aria-hidden="true"></div><div class="edge edge-b" aria-hidden="true"></div>
 <a class="sr skip" href="#main">Skip to content</a>
 <header class="bar">
   <div class="wrap">
@@ -1059,6 +1069,38 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       });
     });
   });
+</script>
+<script>
+  // Keep the edge strips (see .edge) the colour of what is next to them, so Safari's toolbars match the
+  // page as it scrolls: white over the resume, black over the Apps section, an open app's own colour.
+  (function () {
+    var root = document.documentElement, queued = false, last = [];
+    var solid = function (c) { return c && c !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(c); };
+    function colourAt(x, y) {
+      for (var e = document.elementFromPoint(x, y); e; e = e.parentElement) {
+        var c = getComputedStyle(e).backgroundColor;
+        if (solid(c)) return c;
+      }
+      return getComputedStyle(document.body).backgroundColor;
+    }
+    function paint() {
+      queued = false;
+      var open = root.classList.contains('app-open') && getComputedStyle(root).getPropertyValue('--app-bg').trim();
+      var right = open || colourAt(innerWidth - 14, innerHeight / 2);
+      var bottom = open || colourAt(innerWidth / 2, innerHeight - 14);
+      // only on a change: setting a style on <html> wakes the observer below
+      if (right !== last[0]) root.style.setProperty('--edge', right);
+      if (bottom !== last[1]) root.style.setProperty('--edge-b', bottom);
+      last = [right, bottom];
+    }
+    function soon() { if (!queued) { queued = true; requestAnimationFrame(paint); } }
+    addEventListener('scroll', soon, { passive: true });
+    addEventListener('resize', soon);
+    addEventListener('load', soon);
+    // an app opening or closing, or changing its own colour, changes the classes and --app-bg on <html>
+    new MutationObserver(soon).observe(root, { attributes: true, attributeFilter: ['class', 'style'] });
+    soon();
+  })();
 </script>
 </body>
 </html>
