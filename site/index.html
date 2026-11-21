@@ -83,7 +83,7 @@ a:hover { color: var(--red); }
 
 /* The name fills the measure, edge to edge */
 .hero { container-type: inline-size; padding-top: 44px; }
-h1 { margin: 0; font-size: clamp(48px, 18.5cqw, 244px); font-weight: 900; font-stretch: 125%; line-height: .84; letter-spacing: -.055em; white-space: nowrap; margin-left: -.06em; }
+h1 { margin: 0; font-size: clamp(30px, 18.5cqw, 244px); font-weight: 900; font-stretch: 125%; line-height: .84; letter-spacing: -.055em; white-space: nowrap; margin-left: -.06em; }
 h1 .ln { display: block; overflow: hidden; padding: .06em 0 .04em; margin: -.06em 0 -.04em; }
 h1 .ln > span { display: block; animation: rise .9s cubic-bezier(.16,1,.3,1) both; }
 h1 .ln + .ln > span { animation-delay: .09s; }
@@ -171,7 +171,7 @@ dd { margin: 0; color: var(--body); }
 .start:hover { background: var(--red); border-color: var(--red); color: var(--paper); }
 .start svg { width: 13px; height: 13px; }
 .start:focus-visible { outline-color: var(--paper); }
-.ghost { font-size: 14.5px; font-weight: 500; color: var(--night-quiet); }
+.ghost { display: inline-flex; align-items: center; min-height: 44px; font-size: 14.5px; font-weight: 500; color: var(--night-quiet); }
 .syncbtn { grid-column: span 2; justify-self: end; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #3a3a3a; background: transparent; color: var(--paper); font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .syncbtn:hover { border-color: var(--paper); }
 .syncbtn i { width: 8px; height: 8px; border-radius: 50%; background: #555; }
@@ -194,7 +194,20 @@ dd { margin: 0; color: var(--body); }
   display: flex; flex-direction: column; overflow: hidden; background: #000; color: var(--w-ink); font-size: 14.5px; line-height: 1.5;
   transform-origin: 0 0; transform: var(--card, scale(.5)); clip-path: var(--clip, inset(0px 0px 0px 0px)); transition: transform .6s var(--ease), clip-path .6s var(--ease); will-change: transform; }
 .window.preview { pointer-events: none; }
-.window.open { position: fixed; z-index: 50; }
+/* Safari's controls blend into the page. On the folded iPhone Duo they sit in a column down the right
+   and a bar along the bottom, and Safari colours them only from fixed or sticky elements within a few
+   pixels of that edge (it ignores theme-color). These two strips are that element: they always carry the
+   colour of whatever is beside them (set by the script below), so the column and the bar read as part
+   of the page. Real elements, not ::before/::after, which Safari does not sample. They sit above the
+   page but under an open app's window (50), which touches the same edges in the app's colour, so they
+   never cover an app's content or scrollbars. */
+.edge { position: fixed; z-index: 49; pointer-events: none; background: var(--edge, #fff); }
+.edge-r { top: 0; right: 0; bottom: 0; width: 8px; }
+.edge-b { left: 0; right: 0; bottom: 0; height: 8px; background: var(--edge-b, var(--edge, #fff)); }
+@media print { .edge { display: none; } }
+/* Open, the window wears the app's own colour: Safari tints its toolbars (down the right side and along the
+   bottom on the iPhone Duo's front screen) from a fixed element at the edge, so a black window framed every app in black. */
+.window.open { position: fixed; z-index: 50; background: var(--app-bg, #000); }
 .window.instant { transition: none; }
 /* The bar takes the open app's own colour (set by paintBehind). Safari tints its toolbars and the
    strips around the page (the iPhone Duo's side rail, the bottom bar) from the top of the page,
@@ -230,7 +243,7 @@ html.app-open { background: var(--app-bg, #000); }
 /* Once the app has finished opening the resume is taken out of the picture as well. iOS Safari can leave
    a strip between the window and its toolbar; the resume showing through it would look like a tear.
    On screen only: printing with an app open still prints the resume. */
-@media screen { html.app-shown body { visibility: hidden; } html.app-shown .window.open, html.app-shown .rail { visibility: visible; } }
+@media screen { html.app-shown body { visibility: hidden; } html.app-shown .window.open, html.app-shown .rail, html.app-shown .edge { visibility: visible; } }
 /* An app that is up does not glide: when the split view comes on or goes off (unfolding the Duo), it is in its new place at once. */
 html.app-shown .window.open { transition: none; }
 /* A link straight to an app (bollineni.co/#gridline): keep the resume out of sight until the app is up. */
@@ -256,7 +269,8 @@ html.opening { background: #000; } html.opening body { visibility: hidden; } htm
 /* Sign-off */
 .contact { margin-top: 72px; container-type: inline-size; }
 .contact p { margin: 0 0 6px; color: var(--quiet); font-size: 15px; }
-.mailto { display: inline-block; font-size: clamp(20px, 6.8cqw, 92px); line-height: 1.05; text-decoration: none; white-space: nowrap; letter-spacing: -.045em; }
+.mailto { display: inline-block; max-width: 100%; overflow-wrap: anywhere; font-size: clamp(18px, 6.8cqw, 92px); line-height: 1.05; text-decoration: none; white-space: nowrap; letter-spacing: -.045em; }
+@media (max-width: 340px) { .mailto { white-space: normal; } }
 footer { margin-top: 40px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; font-size: 14px; }
 footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 .print-only { display: none; }
@@ -286,13 +300,13 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .also h3, .also p { grid-column: 1 / -1; } .also .links { grid-column: 1 / -1; text-align: left; margin-top: 4px; }
   .contact { margin-top: 56px; }
 }
-/* Phones and the folded Duo (~380px) */
+/* Phones, the folded Duo (382 wide in Safari) and each half of the open Duo's split view (385) */
 @media (max-width: 600px) {
   :root { --side: max(18px, env(safe-area-inset-left), env(safe-area-inset-right)); --bar: 49px; }
   body { font-size: 16px; }
   .bar .wrap { min-height: 47px; font-size: 13.5px; }
   .brand { display: none; }
-  .bar nav { flex: 1; justify-content: space-between; gap: 12px; overflow-x: auto; scrollbar-width: none; }
+  .bar nav { flex: 1; min-width: 0; justify-content: space-between; gap: 12px; overflow-x: auto; scrollbar-width: none; }
   .bar nav a { padding: 13px 0; }
   .hero { padding-top: 28px; }
   .intro { margin-top: 28px; gap: 14px; }
@@ -304,16 +318,18 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .tomb small { grid-area: label; align-self: end; font-size: 14.5px; } .tomb > span { grid-area: note; align-self: start; font-size: 13px; line-height: 1.4; }
   .tomb b { grid-area: figure; font-size: 34px; text-align: right; }
   .split { margin-top: 64px; }
+  /* Every block spans the full width here, so one column: twelve with 24px gaps need 264px and would push a zoomed page off the side. */
+  .split, .night-top, .also .row { grid-template-columns: minmax(0, 1fr); }
   .night { margin-top: 64px; padding: 52px 0 56px; }
   .launcher { margin-top: 30px; } .stage { margin-top: 24px; row-gap: 24px; }
   .tab .icon { width: 36px; }
   .start { min-height: 48px; padding: 0 22px; }
   .nt-long { display: none; } .nt-short { display: inline; font-size: 15px; line-height: 1; }
-  .winbar { gap: 8px; } .winbar .t { display: none; } .winbar .pill { padding: 6px 10px; } .dots button { width: 18px; }
+  .winbar { gap: 8px; } .winbar .t { display: none; } .winbar .pill { padding: 6px 10px; } .dots { gap: 0; } .dots button { width: 24px; }
   dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } dd { margin-bottom: 10px; }
   .contact { margin-top: 44px; }
 }
-/* The iPhone Duo's front screen held upright (closed, ~368 x 594, less Safari's bars): the tabs,
+/* The iPhone Duo's front screen held upright (382 x 580-618 in Safari), and each split-view half (385 x 571-609): the tabs,
    the app's name, Start and the top of the card have to share one view, so the section tightens,
    the feature chips go (the pitch says the same), and the card is never taller than the screen. */
 @media (max-width: 600px) and (max-height: 720px) and (orientation: portrait) {
@@ -333,7 +349,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .slot { max-height: calc(100svh - var(--bar) - env(safe-area-inset-top, 0px) - 24px); }
   .also { margin-top: 36px; }
 }
-/* Short, wide screens: the iPhone Duo held sideways, closed (594 x 368) or open (951 x 585).
+/* Short, wide screens: the iPhone Duo held sideways, closed (594 x 368-406) or open (951 x 585-620), in Safari CSS pixels.
    The name goes on one line so it still runs edge to edge without filling the screen, and the
    record comes up into the first view. */
 @media (orientation: landscape) and (max-height: 640px) {
@@ -410,6 +426,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 </style>
 </head>
 <body>
+<div class="edge edge-r" aria-hidden="true"></div><div class="edge edge-b" aria-hidden="true"></div>
 <a class="sr skip" href="#main">Skip to content</a>
 <header class="bar">
   <div class="wrap">
@@ -752,11 +769,16 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   function isShowing(id) { return open === id && !win.classList.contains('preview'); }
   // Paint what shows past the window's edges, the browser's toolbar and the window's bar with the open app's colour.
   function paintBehind(id) {
-    var c = id ? bgOf(id) : '';
+    // Until the app's own colour can be read (still loading, or another origin), use its launcher wash, not black.
+    var c = id ? (bgOf(id) || hexToRgb(APPS[id].wash)) : '';
     if (c) root.style.setProperty('--app-bg', c); else root.style.removeProperty('--app-bg');
     themeMeta.content = c || (id ? '#000000' : themeDefault);
     var tone = toneOf(c);
     if (tone) winbar.dataset.tone = tone; else delete winbar.dataset.tone;
+  }
+  function hexToRgb(h) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(h || ''); if (!m) return '';
+    var n = parseInt(m[1], 16); return 'rgb(' + (n >> 16) + ', ' + (n >> 8 & 255) + ', ' + (n & 255) + ')';
   }
   // 'light' or 'dark' for an rgb()/rgba() colour, '' if it can't be read.
   function toneOf(c) {
@@ -1049,6 +1071,44 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       });
     });
   });
+</script>
+<script>
+  // Keep the edge strips (see .edge) the colour of what is next to them, so Safari's toolbars match the
+  // page as it scrolls: white over the resume, black over the Apps section, an open app's own colour.
+  (function () {
+    var root = document.documentElement, queued = false, last = [];
+    var solid = function (c) { return c && c !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(c); };
+    function colourAt(x, y) {
+      for (var e = document.elementFromPoint(x, y); e; e = e.parentElement) {
+        var c = getComputedStyle(e).backgroundColor;
+        if (solid(c)) return c;
+      }
+      return getComputedStyle(document.body).backgroundColor;
+    }
+    function paint() {
+      queued = false;
+      var open = root.classList.contains('app-open') && getComputedStyle(root).getPropertyValue('--app-bg').trim();
+      var right = open || colourAt(innerWidth - 14, innerHeight / 2);
+      var bottom = open || colourAt(innerWidth / 2, innerHeight - 14);
+      if (right === last[0] && bottom === last[1]) return;
+      last = [right, bottom];
+      // Safari reads the strips once and does not notice a new colour on the same element, so each
+      // change puts fresh strips in the page, coloured from the start, and removes the old ones.
+      [['edge-r', right], ['edge-b', bottom]].forEach(function (p) {
+        var old = document.querySelector('.' + p[0]), el = document.createElement('div');
+        el.className = 'edge ' + p[0]; el.setAttribute('aria-hidden', 'true'); el.style.background = p[1];
+        if (old) old.replaceWith(el); else document.body.insertBefore(el, document.body.firstChild);
+      });
+    }
+    function soon() { if (!queued) { queued = true; requestAnimationFrame(paint); } }
+    addEventListener('scroll', soon, { passive: true });
+    addEventListener('resize', soon);
+    addEventListener('load', soon);
+    // an app opening or closing, or changing its own colour, changes the classes and --app-bg on <html>
+    // (this script no longer writes to <html>, so the observer cannot wake itself)
+    new MutationObserver(soon).observe(root, { attributes: true, attributeFilter: ['class', 'style'] });
+    soon();
+  })();
 </script>
 </body>
 </html>
