@@ -74,8 +74,8 @@
       "Backtests on real prices",
       "Rebalancing plans"
     ],
-    "tint": "#2DD4BF",
-    "wash": "#0A2826"
+    "tint": "#7AA2FF",
+    "wash": "#0B1220"
   },
   {
     "id": "gridline",
