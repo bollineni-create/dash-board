@@ -198,8 +198,10 @@ dd { margin: 0; color: var(--body); }
    and a bar along the bottom, and Safari colours them only from fixed or sticky elements within a few
    pixels of that edge (it ignores theme-color). These two strips are that element: they always carry the
    colour of whatever is beside them (set by the script below), so the column and the bar read as part
-   of the page. Real elements, not ::before/::after, which Safari does not sample. */
-.edge { position: fixed; z-index: 60; pointer-events: none; background: var(--edge, #fff); }
+   of the page. Real elements, not ::before/::after, which Safari does not sample. They sit above the
+   page but under an open app's window (50), which touches the same edges in the app's colour, so they
+   never cover an app's content or scrollbars. */
+.edge { position: fixed; z-index: 49; pointer-events: none; background: var(--edge, #fff); }
 .edge-r { top: 0; right: 0; bottom: 0; width: 8px; }
 .edge-b { left: 0; right: 0; bottom: 0; height: 8px; background: var(--edge-b, var(--edge, #fff)); }
 @media print { .edge { display: none; } }
