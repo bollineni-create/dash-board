@@ -63,7 +63,16 @@
       "index.html",
       "app.js",
       "styles.css",
-      "lib"
+      "lib",
+      "core.js",
+      "sync.js",
+      "theme.js",
+      "tokens.css",
+      "views",
+      "icons",
+      "fonts",
+      "manifest.webmanifest",
+      "design.html"
     ],
     "icon": "assets/icon-256.png",
     "installIcon": "assets/icon-1024.png",
