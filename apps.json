@@ -1,32 +1,24 @@
 [
   {
-    "id": "gridline",
-    "name": "Gridline",
-    "repo": "https://github.com/bollineni-create/hotwheels.git",
+    "id": "bridge",
+    "name": "Bridge",
+    "repo": "https://github.com/bollineni-create/bridge.git",
+    "root": "web",
     "files": [
       "index.html",
-      "css",
-      "js",
       "assets"
     ],
-    "icon": "assets/icons/icon.svg",
-    "installIcon": "assets/icons/icon-512.png",
-    "kind": "Car deals · live market",
-    "pitch": "Type your ZIP. See the best car deals around you, and the ones worth the drive.",
+    "icon": "web/assets/icon.png",
+    "installIcon": "web/assets/icon-1024.png",
+    "kind": "AI runners \u00b7 Mac + iPhone",
+    "pitch": "One board for two Claude accounts and a model on my Mac: what each is doing, what only I can decide, and work handed off in a line.",
     "chips": [
-      "Live listings",
-      "Fair value on every car",
-      "Market map"
+      "Native SwiftUI",
+      "Mac + foldable iPhone",
+      "Local model first"
     ],
-    "tint": "#34D399",
-    "wash": "#0B2A22",
-    "hostedConfig": {
-      "global": "gridlineDesktop",
-      "keys": {
-        "autodev": "AUTODEV_KEY",
-        "visor": "VISOR_KEY"
-      }
-    }
+    "tint": "#D62E1F",
+    "wash": "#1F0806"
   },
   {
     "id": "palimpsest",
@@ -42,8 +34,7 @@
       "assets"
     ],
     "icon": "assets/icon.png",
-    "iconStyle": "transform: translateY(-1.4%) scale(1.17)",
-    "kind": "Time travel · 3D globe",
+    "kind": "Time travel \u00b7 3D globe",
     "pitch": "A journey through time on a 3D globe, from the Big Bang to yesterday. Drag the timeline and the world changes with it.",
     "chips": [
       "13.8 billion years",
@@ -76,7 +67,7 @@
     ],
     "icon": "assets/icon-256.png",
     "installIcon": "assets/icon-1024.png",
-    "kind": "Trading strategies · backtests",
+    "kind": "Trading strategies \u00b7 backtests",
     "pitch": "Describe a trading idea in plain English. Ballast writes the rules, backtests them on real prices, and keeps your portfolio on target.",
     "chips": [
       "Plain-English strategies",
@@ -85,6 +76,35 @@
     ],
     "tint": "#2DD4BF",
     "wash": "#0A2826"
+  },
+  {
+    "id": "gridline",
+    "name": "Gridline",
+    "repo": "https://github.com/bollineni-create/hotwheels.git",
+    "files": [
+      "index.html",
+      "css",
+      "js",
+      "assets"
+    ],
+    "icon": "assets/icons/icon.svg",
+    "installIcon": "assets/icons/icon-512.png",
+    "kind": "Car deals \u00b7 live market",
+    "pitch": "Type your ZIP. See the best car deals around you, and the ones worth the drive.",
+    "chips": [
+      "Live listings",
+      "Fair value on every car",
+      "Market map"
+    ],
+    "tint": "#34D399",
+    "wash": "#0B2A22",
+    "hostedConfig": {
+      "global": "gridlineDesktop",
+      "keys": {
+        "autodev": "AUTODEV_KEY",
+        "visor": "VISOR_KEY"
+      }
+    }
   },
   {
     "id": "loom",
@@ -99,7 +119,7 @@
     ],
     "icon": "web/assets/icon.png",
     "installIcon": "web/assets/icon-512.png",
-    "kind": "Second brain · notes & links",
+    "kind": "Second brain \u00b7 notes & links",
     "pitch": "Save notes, links, images and files; Claude summarizes and tags each one, and your library becomes a map you can search and ask.",
     "chips": [
       "A map of your ideas",
@@ -120,7 +140,7 @@
     ],
     "icon": "web/assets/icon.png",
     "installIcon": "web/assets/icon-512.png",
-    "kind": "Archived · iOS volunteer app",
+    "kind": "Archived \u00b7 iOS volunteer app",
     "pitch": "An iOS app for the volunteers and board of Project Downtown Tampa: the route, the headcount at each stop, and the resource list. Archived; the page keeps a working copy of the counter.",
     "chips": [
       "Archived project",
@@ -129,27 +149,7 @@
     ],
     "tint": "#0199F5",
     "wash": "#04202F",
-    "archived": true
-  },
-  {
-    "id": "bridge",
-    "name": "Bridge",
-    "repo": "https://github.com/bollineni-create/bridge.git",
-    "root": "web",
-    "files": [
-      "index.html",
-      "assets"
-    ],
-    "icon": "web/assets/icon.png",
-    "installIcon": "web/assets/icon-1024.png",
-    "kind": "AI runners · Mac + iPhone",
-    "pitch": "One board for two Claude accounts and a model on my Mac: what each is doing, what only I can decide, and work handed off in a line.",
-    "chips": [
-      "Native SwiftUI",
-      "Mac + foldable iPhone",
-      "Local model first"
-    ],
-    "tint": "#D62E1F",
-    "wash": "#1F0806"
+    "archived": true,
+    "shelf": false
   }
 ]

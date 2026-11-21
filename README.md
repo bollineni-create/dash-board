@@ -66,7 +66,8 @@ Add an entry to `apps.json`, then deploy. The launcher picks up the new tab, the
 | `branch` | Follow this branch instead of the default one. Use it to try an app's unmerged branch, then remove it. |
 | `chips` | Feature tags shown under the pitch. |
 | `installIcon` | A PNG, 512px or larger, used when someone installs the app to their home screen (Share → Add to Home Screen, or Install app in Chrome). Defaults to `icon`, which then has to be a PNG. |
-| `iconStyle` | Extra CSS for the icon, to nudge one that is off-centre. |
+| `iconStyle` | Extra CSS for the icon. Usually not needed: the build zooms an icon drawn inside a transparent margin to fill its tile (`lib/icon-fit.js`), so every icon reads the same size. Set this only to override that. |
+| `shelf` | `false` to leave the app out of the tab row: it gets a row in the list under the launcher (above StudyBuddy) whose Open/View button still opens it over the page (PDT App). |
 | `ownsEsc` | `true` if the app uses Esc itself. The launcher then leaves Esc to the app. |
 | `archived` | `true` for a past project kept as a record (PDT App). Its button says View instead of Start. |
 

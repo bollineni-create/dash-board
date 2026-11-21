@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { extname } from 'node:path';
 import { stampAssets } from './lib/stamp-assets.js';
+import { iconFit } from './lib/icon-fit.js';
 
 const OUT = 'public', SRC = '.src';
 // Folders the site already uses, and the front page's own anchors (bollineni.co/#apps): an app's id is its address and its #link.
@@ -112,8 +113,12 @@ for (const a of apps) {
       .replace(/[ \t]*<meta\b[^>]*\bname\s*=\s*["']?(?:apple-mobile-web-app-capable|mobile-web-app-capable|apple-mobile-web-app-title)["'\s][^>]*>[ \t]*\r?\n?/gi, '')
       .replace('</head>', `${appHead}\n</head>`));
   }
-  shelf.push({ id: a.id, name: a.name, icon: `/${icon}`, iconStyle: a.iconStyle || '', url: `/${a.id}/`, kind: a.kind,
-    pitch: a.pitch, chips: a.chips || [], tint: a.tint, wash: a.wash, ownsEsc: !!a.ownsEsc, archived: !!a.archived });
+  // Icons drawn inside a transparent margin are zoomed to fill the tile like the full-bleed ones
+  // (lib/icon-fit.js). `iconStyle` in apps.json overrides this for an icon that needs a hand nudge.
+  const iconStyle = a.iconStyle ?? iconFit(`${OUT}/${icon}`);
+  if (iconStyle) console.log(`${a.id}: icon ${iconStyle}`);
+  shelf.push({ id: a.id, name: a.name, icon: `/${icon}`, iconStyle, onShelf: a.shelf !== false, url: `/${a.id}/`, kind: a.kind,
+    pitch: a.pitch, year: a.year || '', chips: a.chips || [], tint: a.tint, wash: a.wash, ownsEsc: !!a.ownsEsc, archived: !!a.archived });
 }
 
 // The launcher is the Apps section of the front page (site/index.html, Naren's resume). The page
@@ -121,17 +126,24 @@ for (const a of apps) {
 // in its head (a link like bollineni.co/#gridline opens that app), and a tab for each app. A tab
 // is a plain link to the app's own page, so it works before the script runs and without it.
 const hex = (c, field, id) => { if (!/^#[0-9a-f]{3,8}$/i.test(c)) throw new Error(`apps.json: "${id}" has a "${field}" that is not a hex colour.`); return c; };
-const tabs = shelf.map((a) => `<a class="tab" href="${esc(a.url)}" data-app="${a.id}" style="--t:${hex(a.tint, 'tint', a.id)}">`
+const tabs = shelf.filter((a) => a.onShelf).map((a) => `<a class="tab" href="${esc(a.url)}" data-app="${a.id}" style="--t:${hex(a.tint, 'tint', a.id)}">`
   + `<span class="icon"><img src="${esc(a.icon)}" alt="" width="40" height="40"${a.iconStyle ? ` style="${esc(a.iconStyle)}"` : ''}></span>`
   + `<span class="lbl">${esc(a.name)}</span><span class="k">${esc(a.kind)}</span></a>`).join('\n          ');
 for (const a of shelf) hex(a.wash, 'wash', a.id);
+// Apps with "shelf": false are not tabs: each gets a row in the list under the launcher (above
+// StudyBuddy). Its Open button starts the app over the page like a tab's Start; without the
+// script it is a plain link to the app's own page.
+const rows = shelf.filter((a) => !a.onShelf).map((a) => `<div class="row"><h3>${esc(a.name)}</h3><p>${esc(a.pitch)}</p>`
+  + `<span class="links noprint">${a.year ? `<span class="when">${esc(a.year)}</span>` : ''}`
+  + `<a href="${esc(a.url)}" data-open="${a.id}">${a.archived ? 'View' : 'Open'}</a></span></div>`).join('\n        ');
 const homePath = `${OUT}/index.html`;
 const home = readFileSync(homePath, 'utf8');
-for (const mark of ['/*APP_IDS*/[]', '/*APPS*/[]', '<!--APP_TABS-->']) if (!home.includes(mark)) throw new Error(`site/index.html: no ${mark} placeholder.`);
+for (const mark of ['/*APP_IDS*/[]', '/*APPS*/[]', '<!--APP_TABS-->', '<!--APP_ROWS-->']) if (!home.includes(mark)) throw new Error(`site/index.html: no ${mark} placeholder.`);
 writeFileSync(homePath, home
   .replace('/*APP_IDS*/[]', JSON.stringify(shelf.map((a) => a.id)))
   .replace('/*APPS*/[]', () => JSON.stringify(shelf).replace(/</g, '\\u003c'))
-  .replace('<!--APP_TABS-->', () => tabs));
+  .replace('<!--APP_TABS-->', () => tabs)
+  .replace('<!--APP_ROWS-->', () => rows));
 
 // /apps was the launcher's own page. It now forwards to the front page, keeping any #app link.
 const oldPath = `${OUT}/apps/index.html`;
