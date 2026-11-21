@@ -99,16 +99,6 @@ h1 i { font-style: normal; color: var(--red); }
 .btn.solid { background: var(--ink); color: var(--paper); }
 .btn:hover { background: var(--red); border-color: var(--red); color: var(--paper); }
 
-/* Record: four tombstones, joined like a deal announcement */
-#record { margin-top: 64px; container-type: inline-size; }
-.matter { margin: 0 0 12px; font-size: 14px; color: var(--quiet); }
-.tombs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; background: var(--ink); border: 2px solid var(--ink); }
-.tomb { background: var(--paper); padding: 20px 20px 18px; min-height: 216px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
-.tomb.inv { background: var(--ink); color: var(--paper); }
-.tomb small { font-size: 15px; font-weight: 600; }
-.tomb b { position: relative; white-space: nowrap; font-size: clamp(32px, 4cqw, 54px); font-weight: 800; font-stretch: 112%; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
-.tomb > span { font-size: 14px; color: var(--quiet); }
-.tomb.inv > span { color: #C9C9C9; }
 
 /* Sections: heading in the left column, content on the right */
 .split { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0 24px; margin-top: 104px; }
@@ -279,8 +269,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
    the two-column layout above, so this starts below 900. */
 @media (max-width: 899px) {
   .role, .lede, .actions { grid-column: 1 / -1; }
-  .tombs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .tomb { min-height: 172px; } .tomb b { font-size: clamp(32px, 7.4cqw, 60px); }
   .split { margin-top: 80px; }
   .split > h2, .split > .rows { grid-column: 1 / -1; }
   .split > h2 { position: static; padding: 0 0 18px; }
@@ -311,12 +299,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .hero { padding-top: 28px; }
   .intro { margin-top: 28px; gap: 14px; }
   .btn { padding: 0 16px; }
-  #record { margin-top: 44px; }
-  /* On a phone the tombstones stack into a ledger: what it is on the left, the figure on the right. */
-  .tombs { grid-template-columns: minmax(0, 1fr); }
-  .tomb { min-height: 0; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "label figure" "note figure"; gap: 2px 14px; align-items: center; }
-  .tomb small { grid-area: label; align-self: end; font-size: 14.5px; } .tomb > span { grid-area: note; align-self: start; font-size: 13px; line-height: 1.4; }
-  .tomb b { grid-area: figure; font-size: 34px; text-align: right; }
   .split { margin-top: 64px; }
   /* Every block spans the full width here, so one column: twelve with 24px gaps need 264px and would push a zoomed page off the side. */
   .split, .night-top, .also .row { grid-template-columns: minmax(0, 1fr); }
@@ -350,25 +332,17 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .also { margin-top: 36px; }
 }
 /* Short, wide screens: the iPhone Duo held sideways, closed (594 x 368-406) or open (951 x 585-620), in Safari CSS pixels.
-   The name goes on one line so it still runs edge to edge without filling the screen, and the
-   record comes up into the first view. */
+   The name goes on one line so it still runs edge to edge without filling the screen. */
 @media (orientation: landscape) and (max-height: 640px) {
   .hero { padding-top: 22px; }
   h1 { font-size: clamp(40px, 10.5cqw, 244px); }
   h1 .ln { display: inline-block; vertical-align: top; }
   .intro { margin-top: 22px; }
-  #record { margin-top: 36px; }
-  .tomb { min-height: 138px; padding: 14px 18px 14px; }
 }
-/* Closed Duo held sideways: two tombstones a row instead of a one-column ledger. */
+/* Closed Duo held sideways. */
 @media (orientation: landscape) and (max-height: 640px) and (max-width: 760px) {
-  .tombs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .tomb { display: flex; align-items: stretch; min-height: 0; gap: 6px; }
-  .tomb > small, .tomb > span, .tomb > b { align-self: auto; text-align: left; }
-  .tomb b { font-size: 30px; text-align: left; }
   .bar nav { justify-content: flex-start; gap: 22px; }
   .lede { font-size: 19px; }
-  #record { margin-top: 28px; }
   /* Apps: pitch beside the card again, as on a wide screen, so both fit the 330-point-tall view. */
   .night { padding: 32px 0 36px; }
   .night-top { gap: 8px 24px; }
@@ -402,12 +376,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   .hero { padding-top: 0; }
   h1 { font-size: 30pt; margin: 0; letter-spacing: -.04em; } h1 br { display: none; } h1 .ln { display: inline; overflow: visible; } h1 .ln > span { display: inline; animation: none; }
   .intro { margin-top: 8px; gap: 4px 16px; } .role { font-size: 10pt; } .lede { font-size: 11.5pt; max-width: none; }
-  #record { margin-top: 10px; } .matter { display: none; }
-  .tombs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; border-width: 1px; }
-  .tomb { min-height: 0; padding: 7px 8px; gap: 3px; } .tomb b { font-size: 18pt; } .tomb small, .tomb > span { font-size: 8pt; }
-  .tomb.inv { background: #fff; color: #000; } .tomb.inv > span { color: #333; }
-  /* Print the real figures even if the count-up is still running. */
-  .tomb b [data-to] { display: none; } .tomb b .sr { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
   .split { display: block; margin-top: 12px; }
   h2 { font-size: 12pt; letter-spacing: -.01em; } .split > h2 { position: static; padding: 0 0 4px; }
   .row { padding: 5px 0 6px; break-inside: avoid; border-top-width: .5pt !important; }
@@ -432,7 +400,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   <div class="wrap">
     <a class="brand" href="#top">bollineni.co</a>
     <nav aria-label="Sections">
-      <a href="#record">Record</a>
       <a href="#experience">Experience</a>
       <a href="#research">Research</a>
       <a href="#apps">Apps</a>
@@ -455,16 +422,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
       </div>
     </div>
   </div>
-
-  <section id="record" class="wrap" aria-label="Record">
-    <p class="matter noprint">This announcement appears as a matter of record only.</p>
-    <div class="tombs" role="list">
-      <div class="tomb" role="listitem"><small>Core cash revenue</small><b><span aria-hidden="true" data-to="90" data-pre="+" data-suf="%">+90%</span><span class="sr">+90%</span></b><span>$438K to $835K, year over year</span></div>
-      <div class="tomb" role="listitem"><small>Treasury book</small><b><span aria-hidden="true" data-to="193" data-pre="$" data-suf="MM+">$193MM+</span><span class="sr">$193MM+</span></b><span>Deposits +12% (+$20.5MM)</span></div>
-      <div class="tomb inv" role="listitem"><small>Seattle lending</small><b><span aria-hidden="true" data-to="45" data-pre="$" data-suf="MM+">$45MM+</span><span class="sr">$45MM+</span></b><span>Credit originated with Chase lending teams</span></div>
-      <div class="tomb" role="listitem"><small>Client satisfaction</small><b>5/5</b><span>CB Outstanding Banker recognition</span></div>
-    </div>
-  </section>
 
   <section id="experience" class="wrap split">
     <h2 class="wide">Experience</h2>
@@ -638,23 +595,6 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
     }, { rootMargin: '-45% 0px -50% 0px' });
     document.querySelectorAll('main section[id], #top').forEach(function (s) { seen.observe(s); });
 
-    // The record figures count up once, the first time the tombstones come into view.
-    var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var tombs = document.querySelector('.tombs');
-    if (!still && tombs) {
-      var figures = [].slice.call(tombs.querySelectorAll('[data-to]'));
-      var run = new IntersectionObserver(function (entries) {
-        if (!entries[0].isIntersecting) return;
-        run.disconnect();
-        var t0 = performance.now() + 350, dur = 1200;
-        (function tick(t) {
-          var p = Math.min(1, Math.max(0, (t - t0) / dur)), e = 1 - Math.pow(1 - p, 4);
-          figures.forEach(function (f) { f.textContent = (f.dataset.pre || '') + Math.round(f.dataset.to * e) + (f.dataset.suf || ''); });
-          if (p < 1) requestAnimationFrame(tick);
-        })(performance.now());
-      }, { threshold: .35 });
-      run.observe(tombs);
-    }
   }
 })();
 
