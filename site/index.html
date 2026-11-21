@@ -194,7 +194,9 @@ dd { margin: 0; color: var(--body); }
   display: flex; flex-direction: column; overflow: hidden; background: #000; color: var(--w-ink); font-size: 14.5px; line-height: 1.5;
   transform-origin: 0 0; transform: var(--card, scale(.5)); clip-path: var(--clip, inset(0px 0px 0px 0px)); transition: transform .6s var(--ease), clip-path .6s var(--ease); will-change: transform; }
 .window.preview { pointer-events: none; }
-.window.open { position: fixed; z-index: 50; }
+/* Open, the window wears the app's own colour: Safari tints its toolbars (down the right side and along the
+   bottom on the iPhone Duo's front screen) from a fixed element at the edge, so a black window framed every app in black. */
+.window.open { position: fixed; z-index: 50; background: var(--app-bg, #000); }
 .window.instant { transition: none; }
 /* The bar takes the open app's own colour (set by paintBehind). Safari tints its toolbars and the
    strips around the page (the iPhone Duo's side rail, the bottom bar) from the top of the page,
@@ -755,11 +757,16 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   function isShowing(id) { return open === id && !win.classList.contains('preview'); }
   // Paint what shows past the window's edges, the browser's toolbar and the window's bar with the open app's colour.
   function paintBehind(id) {
-    var c = id ? bgOf(id) : '';
+    // Until the app's own colour can be read (still loading, or another origin), use its launcher wash, not black.
+    var c = id ? (bgOf(id) || hexToRgb(APPS[id].wash)) : '';
     if (c) root.style.setProperty('--app-bg', c); else root.style.removeProperty('--app-bg');
     themeMeta.content = c || (id ? '#000000' : themeDefault);
     var tone = toneOf(c);
     if (tone) winbar.dataset.tone = tone; else delete winbar.dataset.tone;
+  }
+  function hexToRgb(h) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(h || ''); if (!m) return '';
+    var n = parseInt(m[1], 16); return 'rgb(' + (n >> 16) + ', ' + (n >> 8 & 255) + ', ' + (n & 255) + ')';
   }
   // 'light' or 'dark' for an rgb()/rgba() colour, '' if it can't be read.
   function toneOf(c) {
