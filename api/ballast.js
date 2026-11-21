@@ -3,7 +3,10 @@
 // clones into .src/ballast. The paper-trading autopilot is never served from here: it
 // trades with Alpaca keys and stays in the Mac app.
 import { getHistory, getQuotes, stockProvider } from '../.src/ballast/marketdata.js';
-import { aiEnabled, generateStrategy } from '../.src/ballast/ai.js';
+import * as ai from '../.src/ballast/ai.js';
+
+// readPortfolio arrives with Ballast 2; older copies of Ballast don't have it.
+const { aiEnabled, generateStrategy, readPortfolio } = ai;
 
 const GENERATE_PER_10_MIN = Number(process.env.BALLAST_GENERATE_LIMIT) || 6;
 const hits = new Map(); // ip -> [windowStart, count]; per instance, so it's a soft limit
@@ -27,7 +30,7 @@ export default async function handler(req, res) {
   const url = new URL(req.url, `https://${req.headers.host}`);
   const route = url.searchParams.get('route') || '';
   try {
-    if (route === 'status' && req.method === 'GET') return send(res, 200, { ai: aiEnabled, stockProvider, autopilot: false });
+    if (route === 'status' && req.method === 'GET') return send(res, 200, { ai: aiEnabled, stockProvider, autopilot: false, portfolioReader: Boolean(readPortfolio) });
     if (route === 'history' && req.method === 'GET') {
       const raw = url.searchParams.get('years');
       const years = raw === 'max' ? 'max' : Math.min(50, Math.max(1, Number(raw) || 3));
@@ -48,6 +51,21 @@ export default async function handler(req, res) {
         return send(res, 429, { error: 'The Claude builder is busy for you right now. Try again in a couple of minutes.' });
       }
       return send(res, 200, await generateStrategy(prompt, currentCode ? String(currentCode) : undefined));
+    }
+    // Reads positions out of a screenshot or loose text with Claude (the portfolio check-up).
+    // Nothing is stored; it shares the builder's per-visitor limit.
+    if (route === 'portfolio/read' && req.method === 'POST') {
+      if (!readPortfolio) return send(res, 404, { error: 'Not found' });
+      if (!sameSite(req) || !String(req.headers['content-type']).startsWith('application/json')) return send(res, 403, { error: 'Forbidden' });
+      const { text, image } = req.body || {};
+      if (typeof text !== 'string' && typeof image !== 'string') return send(res, 400, { error: 'text or image is required' });
+      if ((text && text.length > 8000) || (image && image.length > 4_000_000)) return send(res, 413, { error: 'That is too large. Try a smaller screenshot.' });
+      const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+      if (overLimit(ip)) {
+        res.setHeader('Retry-After', '120');
+        return send(res, 429, { error: 'Too many readings for now. Try again in a couple of minutes.' });
+      }
+      return send(res, 200, await readPortfolio({ text: typeof text === 'string' ? text : '', image: typeof image === 'string' ? image : null }));
     }
     if (route.startsWith('autopilot')) return send(res, 404, { error: 'The paper-trading autopilot runs only in the Ballast Mac app.' });
     return send(res, 404, { error: 'Not found' });
