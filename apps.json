@@ -67,8 +67,8 @@
     ],
     "icon": "assets/icon-256.png",
     "installIcon": "assets/icon-1024.png",
-    "kind": "Trading strategies \u00b7 backtests",
-    "pitch": "Describe a trading idea in plain English. Ballast writes the rules, backtests them on real prices, and keeps your portfolio on target.",
+    "kind": "Personal project \u00b7 backtests",
+    "pitch": "Describe a trading idea in plain English. Ballast writes the rules, backtests them on real prices, and keeps your portfolio on target. A personal, non-commercial project; not investment advice.",
     "chips": [
       "Plain-English strategies",
       "Backtests on real prices",
