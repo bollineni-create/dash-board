@@ -666,7 +666,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
   function warm(id) {
     if (frames[id] || !APPS[id]) return frames[id];
     var a = APPS[id], fr = { el: document.createElement('iframe'), loaded: false, waiters: [] };
-    fr.el.title = a.name; fr.el.referrerPolicy = 'no-referrer'; fr.el.allow = 'clipboard-write';
+    fr.el.title = a.name; fr.el.referrerPolicy = 'no-referrer'; fr.el.allow = 'clipboard-write; geolocation';
     fr.el.tabIndex = -1;
     fr.el.addEventListener('load', function () {
       fr.loaded = true;
