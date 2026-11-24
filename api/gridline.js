@@ -121,26 +121,28 @@ export function sanitize(a) {
 
 async function ask(q) {
   const base = { model: MODEL, max_tokens: 1200, messages: [{ role: 'user', content: q }] };
+  let params = { ...base, system: SYSTEM, output_config: { format: { type: 'json_schema', schema: SCHEMA } } };
   let response;
   try {
-    response = await client.messages.create({ ...base, system: SYSTEM, output_config: { format: { type: 'json_schema', schema: SCHEMA } } });
+    response = await client.messages.create(params);
   } catch (e) {
     if (e.status !== 400) throw e;
     // The API turned the structured request down. Log why, then ask for the same JSON in words
     // so the search still works while the schema is fixed.
     console.error('gridline ask: structured output rejected:', e.message);
-    response = await client.messages.create({ ...base,
+    params = { ...base,
       system: `${SYSTEM}\n\nReply with only a JSON object, no prose and no code fence, matching this JSON Schema exactly ` +
-        `(use only the listed enum values; models are {make, model} objects):\n${JSON.stringify(SCHEMA)}` });
+        `(use only the listed enum values; models are {make, model} objects):\n${JSON.stringify(SCHEMA)}` };
+    response = await client.messages.create(params);
   }
   if (response.stop_reason === 'refusal') return { offTopic: true, note: '' };
   try {
     return sanitize(readJson(response));
   } catch (e) {
-    // Rare: a reply cut short or wrapped in extra text. Log what came back and ask once more.
+    // Rare: a reply cut short or wrapped in extra text. Log what came back and ask once more,
+    // the same way that just worked (never re-sending a schema the API already rejected).
     console.error('gridline ask: unreadable reply', response.stop_reason, JSON.stringify(response.content).slice(0, 600));
-    const again = await client.messages.create({ ...base, system: SYSTEM, output_config: { format: { type: 'json_schema', schema: SCHEMA } } });
-    return sanitize(readJson(again));
+    return sanitize(readJson(await client.messages.create(params)));
   }
 }
 
