@@ -7,7 +7,9 @@ const UPSTREAMS = { visor: 'https://api.visor.vin', autodev: 'https://api.auto.d
 const PATHS = { visor: /^\/v1\/[A-Za-z0-9_\-/.%]+$/, autodev: /^\/(listings|photos)(\/[A-Za-z0-9]{1,17})?$/ };
 const ENV_KEYS = { visor: 'VISOR_KEY', autodev: 'AUTODEV_KEY' };
 const UPSTREAM_TIMEOUT_MS = Number(process.env.RELAY_TIMEOUT_MS) || 15000;
-const LIMIT_PER_MIN = Number(process.env.RELAY_LIMIT_PER_MIN) || 30;
+// A cold Gridline home page needs ~90 calls; 30 a minute refused a third of them and held
+// Whole Market for over a minute. 150 fits a full page with room, well under Visor's 600/min.
+const LIMIT_PER_MIN = Number(process.env.RELAY_LIMIT_PER_MIN) || 150;
 
 const hits = new Map(); // ip -> [windowStart, count]; per instance, so it's a soft limit
 function overLimit(ip) {
