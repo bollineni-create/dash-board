@@ -8,6 +8,10 @@
       "destination": "/api/relay?provider=:provider&path=:path*"
     },
     {
+      "source": "/gridline/api/:route*",
+      "destination": "/api/gridline?route=:route*"
+    },
+    {
       "source": "/ballast/api/:route*",
       "destination": "/api/ballast?route=:route*"
     },
