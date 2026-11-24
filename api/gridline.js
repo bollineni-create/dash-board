@@ -46,7 +46,7 @@ export const ENUMS = {
 const STATES = 'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ');
 
 const list = (values, description) => ({ type: 'array', items: { type: 'string', enum: values }, description });
-const num = (description) => ({ type: ['integer', 'null'], description });
+const num = (description) => ({ anyOf: [{ type: 'integer' }, { type: 'null' }], description });
 const SCHEMA = {
   type: 'object',
   properties: {
@@ -68,9 +68,9 @@ const SCHEMA = {
     priceMin: num('Lowest price in dollars.'), priceMax: num('Highest price in dollars ("under 25k" = 25000).'),
     milesMax: num('Most miles on the odometer.'),
     nearMe: { type: 'boolean', description: 'True when the user wants cars near them ("near me", "nearby", "local").' },
-    near: { type: ['string', 'null'], description: 'A 5-digit ZIP code, or "City, ST", when the question names a place.' },
+    near: { anyOf: [{ type: 'string' }, { type: 'null' }], description: 'A 5-digit ZIP code, or "City, ST", when the question names a place.' },
     radius: num('Search radius in miles, when given.'),
-    sort: { type: ['string', 'null'], enum: [...ENUMS.sort, null], description: 'price-asc for cheapest, best-deal for deals/bargains.' },
+    sort: { anyOf: [{ type: 'string', enum: ENUMS.sort }, { type: 'null' }], description: 'price-asc for cheapest, best-deal for deals/bargains.' },
     belowMarket: { type: 'boolean', description: 'True when they want deals or below-market prices.' },
     note: { type: 'string', description: 'One short sentence (max 20 words) telling the user how you read the question, e.g. "Reliable 3-row SUVs with room for dogs, under $30k". No filler.' },
     offTopic: { type: 'boolean', description: 'True only when the question has nothing to do with finding a car to buy.' },
@@ -109,18 +109,23 @@ export function sanitize(a) {
 }
 
 async function ask(q) {
-  const response = await client.beta.messages.create({
-    model: MODEL,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-    max_tokens: 700,
-    system: SYSTEM,
-    output_config: { format: { type: 'json_schema', schema: SCHEMA } },
-    messages: [{ role: 'user', content: q }],
-  });
+  const base = { model: MODEL, max_tokens: 700, messages: [{ role: 'user', content: q }] };
+  let response;
+  try {
+    response = await client.messages.create({ ...base, system: SYSTEM, output_config: { format: { type: 'json_schema', schema: SCHEMA } } });
+  } catch (e) {
+    if (e.status !== 400) throw e;
+    // The API turned the structured request down. Log why, then ask for the same JSON in words
+    // so the search still works while the schema is fixed.
+    console.error('gridline ask: structured output rejected:', e.message);
+    response = await client.messages.create({ ...base,
+      system: `${SYSTEM}\n\nReply with only a JSON object, no prose and no code fence, matching this JSON Schema exactly ` +
+        `(use only the listed enum values; models are {make, model} objects):\n${JSON.stringify(SCHEMA)}` });
+  }
   if (response.stop_reason === 'refusal') return { offTopic: true, note: '' };
   const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  return sanitize(JSON.parse(text));
+  const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  return sanitize(JSON.parse(json));
 }
 
 export default async function handler(req, res) {
@@ -144,6 +149,7 @@ export default async function handler(req, res) {
     }
     return send(res, 404, { error: 'Not found' });
   } catch (e) {
-    send(res, e.status && e.status < 600 ? e.status : 502, { error: 'Couldn’t read that question right now.' });
+    console.error('gridline ask failed:', e.status || '', e.message);
+    send(res, 502, { error: 'Couldn’t read that question right now.' });
   }
 }

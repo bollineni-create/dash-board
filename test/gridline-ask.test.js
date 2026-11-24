@@ -45,3 +45,10 @@ test('gridline ask: sanitize drops values Gridline cannot use', () => {
   assert.equal(s.priceMax, 25000);
   assert.equal(sanitize({ near: 'Denver, CO' }).near, 'Denver, CO');
 });
+
+test('gridline ask: the schema has no null inside an enum and stays under the union limit', async () => {
+  const src = (await import('node:fs')).readFileSync(new URL('../api/gridline.js', import.meta.url), 'utf8');
+  assert.ok(!/enum: \[[^\]]*null/.test(src), 'null inside an enum');
+  assert.ok(!/type: \[/.test(src), 'type arrays');
+  assert.ok((src.match(/anyOf/g) || []).length <= 16);
+});
