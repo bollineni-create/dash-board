@@ -96,7 +96,11 @@ it implies.
 - "Like X but Y" or "alternatives to X": pick alternatives and leave X out unless it truly meets Y.
 - When you pick models, leave makes and body empty: the models already say both.
 - "Is X worth it" or "X review" about one model: return that model alone so they can see its prices.
-- Rideshare (Uber, Lyft): reliable, efficient 4-door sedans, hybrids and small SUVs, model year 2012 or newer.`;
+- Rideshare (Uber, Lyft): reliable, efficient 4-door sedans, hybrids and small SUVs, model year 2012 or newer.
+- A message like "Current search: ... Change: ..." is a shopper refining what's on screen. Return the complete \
+updated search: keep what the change doesn't touch, apply the change ("cheaper" lowers priceMax or picks cheaper \
+models, "only hybrids" sets fuel), and write the note about the updated search. Leave place fields empty unless \
+the change names a place.`;
 
 const clean = (arr, allowed) => [...new Set((Array.isArray(arr) ? arr : []).filter((v) => allowed.includes(v)))];
 const int = (v, lo, hi) => (Number.isInteger(v) && v >= lo && v <= hi ? v : null);
@@ -163,7 +167,7 @@ export default async function handler(req, res) {
       // Normalized, so "Aston Martins near me?" and "aston martins near me" share one cached answer.
       const q = String(url.searchParams.get('q') || '').toLowerCase().replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim();
       if (!q) return send(res, 400, { error: 'q is required' });
-      if (q.length > 240) return send(res, 413, { error: 'That question is too long.' });
+      if (q.length > 420) return send(res, 413, { error: 'That question is too long.' });
       const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
       if (overLimit(ip)) {
         res.setHeader('Retry-After', '120');
