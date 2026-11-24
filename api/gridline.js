@@ -119,8 +119,8 @@ async function ask(q) {
     // so the search still works while the schema is fixed.
     console.error('gridline ask: structured output rejected:', e.message);
     response = await client.messages.create({ ...base,
-      system: `${SYSTEM}\n\nReply with only a JSON object, no prose and no code fence, with these keys: ${Object.keys(SCHEMA.properties).join(', ')}. ` +
-        'Arrays default to [], numbers and near/sort to null, booleans to false.' });
+      system: `${SYSTEM}\n\nReply with only a JSON object, no prose and no code fence, matching this JSON Schema exactly ` +
+        `(use only the listed enum values; models are {make, model} objects):\n${JSON.stringify(SCHEMA)}` });
   }
   if (response.stop_reason === 'refusal') return { offTopic: true, note: '' };
   const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
