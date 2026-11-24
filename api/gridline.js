@@ -109,16 +109,23 @@ export function sanitize(a) {
 }
 
 async function ask(q) {
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 700,
-    system: SYSTEM,
-    output_config: { format: { type: 'json_schema', schema: SCHEMA } },
-    messages: [{ role: 'user', content: q }],
-  });
+  const base = { model: MODEL, max_tokens: 700, messages: [{ role: 'user', content: q }] };
+  let response;
+  try {
+    response = await client.messages.create({ ...base, system: SYSTEM, output_config: { format: { type: 'json_schema', schema: SCHEMA } } });
+  } catch (e) {
+    if (e.status !== 400) throw e;
+    // The API turned the structured request down. Log why, then ask for the same JSON in words
+    // so the search still works while the schema is fixed.
+    console.error('gridline ask: structured output rejected:', e.message);
+    response = await client.messages.create({ ...base,
+      system: `${SYSTEM}\n\nReply with only a JSON object, no prose and no code fence, with these keys: ${Object.keys(SCHEMA.properties).join(', ')}. ` +
+        'Arrays default to [], numbers and near/sort to null, booleans to false.' });
+  }
   if (response.stop_reason === 'refusal') return { offTopic: true, note: '' };
   const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  return sanitize(JSON.parse(text));
+  const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  return sanitize(JSON.parse(json));
 }
 
 export default async function handler(req, res) {
