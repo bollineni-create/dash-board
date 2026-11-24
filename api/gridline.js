@@ -85,7 +85,22 @@ Today is ${new Date().toISOString().slice(0, 10)}. Fill only the filters the que
 leave everything else empty or null, because every filter you add hides cars. "Luxury" means luxury brands; \
 "under 25k" means priceMax 25000; "cheap" means sort price-asc. When the question asks for advice ("most reliable", \
 "good for snow", "first car"), answer it by choosing specific models and any filters that follow from the advice. \
-Prices are what a shopper pays today, so keep budgets realistic rather than adding a priceMax the user didn't give.`;
+Prices are what a shopper pays today, so keep budgets realistic rather than adding a priceMax the user didn't give.
+
+Rules that keep good cars from being hidden:
+- Add a feature only when the user names that feature. Listings often leave features out, so a feature filter \
+hides many good matches ("tow a boat" means trucks that tow well, not the Tow Package filter).
+- When the question names something there is no filter for (range, horsepower, mpg, cargo space, towing capacity, \
+seats, reliability, resale value), pick 4 to 8 specific models known to meet it, and add the fuel or drivetrain \
+it implies.
+- "Like X but Y" or "alternatives to X": pick alternatives and leave X out unless it truly meets Y.
+- When you pick models, leave makes and body empty: the models already say both.
+- "Is X worth it" or "X review" about one model: return that model alone so they can see its prices.
+- Rideshare (Uber, Lyft): reliable, efficient 4-door sedans, hybrids and small SUVs, model year 2012 or newer.
+- A message like "Current search: ... Change: ..." is a shopper refining what's on screen. Return the complete \
+updated search: keep what the change doesn't touch, apply the change ("cheaper" lowers priceMax or picks cheaper \
+models, "only hybrids" sets fuel), and write the note about the updated search. Leave place fields empty unless \
+the change names a place.`;
 
 const clean = (arr, allowed) => [...new Set((Array.isArray(arr) ? arr : []).filter((v) => allowed.includes(v)))];
 const int = (v, lo, hi) => (Number.isInteger(v) && v >= lo && v <= hi ? v : null);
@@ -109,23 +124,36 @@ export function sanitize(a) {
 }
 
 async function ask(q) {
-  const base = { model: MODEL, max_tokens: 700, messages: [{ role: 'user', content: q }] };
+  const base = { model: MODEL, max_tokens: 1200, messages: [{ role: 'user', content: q }] };
+  let params = { ...base, system: SYSTEM, output_config: { format: { type: 'json_schema', schema: SCHEMA } } };
   let response;
   try {
-    response = await client.messages.create({ ...base, system: SYSTEM, output_config: { format: { type: 'json_schema', schema: SCHEMA } } });
+    response = await client.messages.create(params);
   } catch (e) {
     if (e.status !== 400) throw e;
     // The API turned the structured request down. Log why, then ask for the same JSON in words
     // so the search still works while the schema is fixed.
     console.error('gridline ask: structured output rejected:', e.message);
-    response = await client.messages.create({ ...base,
+    params = { ...base,
       system: `${SYSTEM}\n\nReply with only a JSON object, no prose and no code fence, matching this JSON Schema exactly ` +
-        `(use only the listed enum values; models are {make, model} objects):\n${JSON.stringify(SCHEMA)}` });
+        `(use only the listed enum values; models are {make, model} objects):\n${JSON.stringify(SCHEMA)}` };
+    response = await client.messages.create(params);
   }
   if (response.stop_reason === 'refusal') return { offTopic: true, note: '' };
+  try {
+    return sanitize(readJson(response));
+  } catch (e) {
+    // Rare: a reply cut short or wrapped in extra text. Log what came back and ask once more,
+    // the same way that just worked (never re-sending a schema the API already rejected).
+    console.error('gridline ask: unreadable reply', response.stop_reason, JSON.stringify(response.content).slice(0, 600));
+    return sanitize(readJson(await client.messages.create(params)));
+  }
+}
+
+// The reply's JSON object, from the text blocks only.
+export function readJson(response) {
   const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-  return sanitize(JSON.parse(json));
+  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
 }
 
 export default async function handler(req, res) {
@@ -139,7 +167,7 @@ export default async function handler(req, res) {
       // Normalized, so "Aston Martins near me?" and "aston martins near me" share one cached answer.
       const q = String(url.searchParams.get('q') || '').toLowerCase().replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim();
       if (!q) return send(res, 400, { error: 'q is required' });
-      if (q.length > 240) return send(res, 413, { error: 'That question is too long.' });
+      if (q.length > 420) return send(res, 413, { error: 'That question is too long.' });
       const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
       if (overLimit(ip)) {
         res.setHeader('Retry-After', '120');

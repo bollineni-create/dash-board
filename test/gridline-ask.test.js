@@ -52,3 +52,10 @@ test('gridline ask: the schema has no null inside an enum and stays under the un
   assert.ok(!/type: \[/.test(src), 'type arrays');
   assert.ok((src.match(/anyOf/g) || []).length <= 16);
 });
+
+test('gridline ask: readJson takes the object out of extra text and fails loudly on a cut-off reply', async () => {
+  const { readJson } = await import('../api/gridline.js');
+  const r = (t) => ({ content: [{ type: 'text', text: t }] });
+  assert.deepEqual(readJson(r('Here you go: {"makes":["Toyota"]} done')), { makes: ['Toyota'] });
+  assert.throws(() => readJson(r('{"models":[{"make":"Toyota"')));
+});
