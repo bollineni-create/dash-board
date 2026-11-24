@@ -95,6 +95,9 @@ seats, reliability, resale value), pick 4 to 8 specific models known to meet it,
 it implies.
 - "Like X but Y" or "alternatives to X": pick alternatives and leave X out unless it truly meets Y.
 - When you pick models, leave makes and body empty: the models already say both.
+- A model is its base name as listings show it, with no trim, battery or powertrain: "Model 3" not \
+"Model 3 Long Range", "RAV4" not "RAV4 Hybrid" (use fuel for hybrid), "F-150" not "F-150 XLT". Keep names where the \
+powertrain is the model itself: "Equinox EV", "F-150 Lightning", "Ioniq 5".
 - "Is X worth it" or "X review" about one model: return that model alone so they can see its prices.
 - Rideshare (Uber, Lyft): reliable, efficient 4-door sedans, hybrids and small SUVs, model year 2012 or newer.
 - A message like "Current search: ... Change: ..." is a shopper refining what's on screen. Return the complete \
@@ -102,8 +105,18 @@ updated search: keep what the change doesn't touch, apply the change ("cheaper" 
 models, "only hybrids" sets fuel), and write the note about the updated search. Leave place fields empty unless \
 the change names a place.`;
 
+const dedupe = (models) => models.filter((m, i) => models.findIndex((x) => x.make === m.make && x.model === m.model) === i);
 const clean = (arr, allowed) => [...new Set((Array.isArray(arr) ? arr : []).filter((v) => allowed.includes(v)))];
 const int = (v, lo, hi) => (Number.isInteger(v) && v >= lo && v <= hi ? v : null);
+
+// Listings file a car under its base model ("Model 3", "RAV4"), so a trim or powertrain on the end
+// matches nothing. Names where the powertrain is the model ("Equinox EV", "F-150 Lightning") stay.
+const MODEL_SUFFIX = /\s+(long range|standard range|extended range|performance|plug-in hybrid|plug-in|hybrid|phev|prime)$/i;
+export function baseModel(name) {
+  let n = name.trim(), prev;
+  do { prev = n; n = n.replace(MODEL_SUFFIX, ''); } while (n !== prev && n.length);
+  return n || name.trim();
+}
 
 // Keep only values Gridline can use, so a bad answer narrows nothing it shouldn't.
 export function sanitize(a) {
@@ -111,7 +124,7 @@ export function sanitize(a) {
   const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
   return {
     makes: [...new Set((a.makes || []).map((m) => str(m, 40)).filter(Boolean))].slice(0, 25),
-    models: (a.models || []).map((m) => ({ make: str(m && m.make, 40), model: str(m && m.model, 60) })).filter((m) => m.make && m.model).slice(0, 8),
+    models: dedupe((a.models || []).map((m) => ({ make: str(m && m.make, 40), model: baseModel(str(m && m.model, 60)) })).filter((m) => m.make && m.model)).slice(0, 8),
     body: clean(a.body, ENUMS.body), fuel: clean(a.fuel, ENUMS.fuel), drivetrain: clean(a.drivetrain, ENUMS.drivetrain),
     transmission: clean(a.transmission, ENUMS.transmission), condition: clean(a.condition, ENUMS.condition),
     colors: clean(a.colors, ENUMS.colorFamily), features: clean(a.features, ENUMS.features), states: clean(a.states, STATES),
