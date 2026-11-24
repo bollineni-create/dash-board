@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { APPS, createHandler, makeStore, pathFor, plainVersion, validId } from '../lib/sync.js';
+import { APPS, LIMITS, createHandler, makeStore, pathFor, plainVersion, validId } from '../lib/sync.js';
 
 // A store kept in memory that behaves like the Blob store: versions change on every write, and
 // a write whose ifMatch (a version, or null for "nothing there yet") doesn't hold is refused.
@@ -199,31 +199,32 @@ test('an address that has used up its new codes can still save to an old file ab
 test('one address can start only a few new codes an hour, and its existing saves keep working', async () => {
   const handler = createHandler(makeStore(memoryBlob(), 'production'));
   const ip = '7.7.7.7';
+  const N = LIMITS.create[1];
   const code = (n) => n.toString(16).padStart(64, '0');
   const first = await call(handler, { method: 'PUT', ip, id: code(0), body: { payload: 'x', base: null } });
-  for (let n = 1; n < 6; n++) assert.equal((await call(handler, { method: 'PUT', ip, id: code(n), body: { payload: 'x', base: null } })).code, 200);
-  const seventh = await call(handler, { method: 'PUT', ip, id: code(6), body: { payload: 'x', base: null } });
+  for (let n = 1; n < N; n++) assert.equal((await call(handler, { method: 'PUT', ip, id: code(n), body: { payload: 'x', base: null } })).code, 200);
+  const seventh = await call(handler, { method: 'PUT', ip, id: code(N), body: { payload: 'x', base: null } });
   assert.equal(seventh.code, 429);
   assert.equal(seventh.headers['Retry-After'], '3600');
   // Naming a version doesn't get a new file past the limit either.
-  assert.equal((await call(handler, { method: 'PUT', ip, id: code(7), body: { payload: 'x', base: '"made up"' } })).code, 429);
+  assert.equal((await call(handler, { method: 'PUT', ip, id: code(N + 1), body: { payload: 'x', base: '"made up"' } })).code, 429);
   // Saves to a code that already exists are not new codes.
   assert.equal((await call(handler, { method: 'PUT', ip, id: code(0), body: { payload: 'y', base: first.data.version } })).code, 200);
   assert.equal(first.data.created, undefined);
   // Another address is unaffected.
-  assert.equal((await call(handler, { method: 'PUT', ip: '8.8.8.8', id: code(8), body: { payload: 'x', base: null } })).code, 200);
+  assert.equal((await call(handler, { method: 'PUT', ip: '8.8.8.8', id: code(N + 2), body: { payload: 'x', base: null } })).code, 200);
   // Sent all at once, a burst gets no more than the same six.
-  const burst = await Promise.all(Array.from({ length: 12 }, (_, n) => call(handler, { method: 'PUT', ip: '6.6.6.6', id: code(100 + n), body: { payload: 'x', base: n % 2 ? null : '"made up"' } })));
-  assert.equal(burst.filter((r) => r.code === 200).length, 6);
-  assert.equal(burst.filter((r) => r.code === 429).length, 6);
+  const burst = await Promise.all(Array.from({ length: 2 * N }, (_, n) => call(handler, { method: 'PUT', ip: '6.6.6.6', id: code(1000 + n), body: { payload: 'x', base: n % 2 ? null : '"made up"' } })));
+  assert.equal(burst.filter((r) => r.code === 200).length, N);
+  assert.equal(burst.filter((r) => r.code === 429).length, N);
   // Conflicts and saves to existing codes hand their count back, so they never use up the six.
-  const own = await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'x', base: null } });
-  for (let n = 0; n < 10; n++) {
-    assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'y', base: '"stale"' } })).code, 409);
+  const own = await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(5000), body: { payload: 'x', base: null } });
+  for (let n = 0; n < 5; n++) {
+    assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(5000), body: { payload: 'y', base: '"stale"' } })).code, 409);
   }
   let version = own.data.version;
-  for (let n = 0; n < 10; n++) version = (await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200), body: { payload: 'z' + n, base: version } })).data.version;
-  for (let n = 1; n < 6; n++) assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(200 + n), body: { payload: 'x', base: null } })).code, 200);
+  for (let n = 0; n < 5; n++) version = (await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(5000), body: { payload: 'z' + n, base: version } })).data.version;
+  for (let n = 1; n < N; n++) assert.equal((await call(handler, { method: 'PUT', ip: '5.5.5.5', id: code(5000 + n), body: { payload: 'x', base: null } })).code, 200);
 });
 
 test('a version read back marked weak still works for the next save', async () => {

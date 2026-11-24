@@ -148,11 +148,22 @@
   if (inPage) root.addEventListener('storage', (e) => { if (e.key === SITE_KEY || e.key === null) fireSite(); });
   if (channel) channel.onmessage = (e) => { if (e.data === 'site') fireSite(); };
 
+  // Asks the browser not to clear this site's storage when space runs low or the site goes unused
+  // for a while (Safari otherwise may after 7 days without a visit), which would unlink the device.
+  const keepStorage = () => { try { const p = navigator.storage && navigator.storage.persist && navigator.storage.persist(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* not offered */ } };
+  // iPhone or iPad in Safari, not opened from the Home Screen: Safari may clear what's saved here.
+  const iosBrowser = () => {
+    const ua = navigator.userAgent || '';
+    const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    return ios && !navigator.standalone && !(root.matchMedia && root.matchMedia('(display-mode: standalone)').matches);
+  };
+
   const site = {
     code() { const s = ls.get(SITE_KEY); return s && normalizeCode(s.code) ? s.code : null; },
     set(code, why) {
       ls.set(SITE_KEY, { code, at: Date.now(), why: why || 'link' });
       ls.set(TOUCH_KEY, null);
+      keepStorage();
       fireSite();
       if (channel) channel.postMessage('site');
     },
@@ -194,6 +205,18 @@
     return statusP;
   }
 
+  // Changes are ordered by when they were made, so a device whose clock is far off (set by hand,
+  // or a dead clock battery) would always win, or always lose. The server's clock corrects it: only
+  // when the difference is over two minutes, so ordinary drift and network delay change nothing.
+  let skew = 0;
+  const clock = () => Date.now() + skew;
+  function heard(r) {
+    const at = Date.parse((r.headers && r.headers.get && r.headers.get('date')) || '');
+    if (!Number.isFinite(at)) return;
+    const off = at - Date.now();
+    skew = Math.abs(off) > 120000 ? off : 0;
+  }
+
   async function request(code, method, route, body) {
     const { id } = await derive(code);
     let r;
@@ -207,6 +230,7 @@
         keepalive: !!body && JSON.stringify(body).length < 60000,
       });
     } catch (e) { throw failure('offline', MESSAGES.offline); }
+    heard(r);
     const data = await r.json().catch(() => null);
     if (r.ok || r.status === 404 || r.status === 409) return { status: r.status, data: data || {} };
     const reason = (data && data.reason) || 'offline';
@@ -289,10 +313,14 @@
   //      write(view) (async; makes the app match), clean(collection, value, id) -> value | null,
   //      onStatus(), onApplied(), onProblem(error), delay, maxPayload }
   function createEngine(o) {
-    const now = () => Date.now();
+    const now = clock;
     const metaKey = 'app:' + o.app;
     const cols = o.collections;
-    let meta = null; // { code, version, doc, shadow, syncedAt, dirty }
+    // { code, version, doc, shadow, syncedAt, dirty }. When sync is turned off here the save is kept
+    // with code null: changes made meanwhile are still stamped with their real time, so linking again
+    // later merges them properly instead of treating them as older than the other devices' copies.
+    let meta = null;
+    const linked = () => !!(meta && meta.code);
     let phase = 'idle', problem = null, applying = 0, started = false, server = null, missed = false;
     let queue = Promise.resolve();
     let timer = null, pending = false;
@@ -300,7 +328,7 @@
 
     const persist = () => { if (meta) meta.savedAt = Date.now(); return meta ? idb.set(metaKey, meta) : idb.remove(metaKey); };
     const tell = (p, err) => { phase = p; problem = err || null; if (o.onStatus) o.onStatus(); listeners.forEach((fn) => fn()); };
-    const status = () => ({ available: !!server, on: !!meta, code: meta ? formatCode(meta.code) : null, phase, problem, syncedAt: meta ? meta.syncedAt || null : null });
+    const status = () => ({ available: !!server, on: linked(), code: linked() ? formatCode(meta.code) : null, phase, problem, syncedAt: linked() ? meta.syncedAt || null : null });
     const serial = (job) => { const run = queue.then(job, job); queue = run.catch(() => {}); return run; };
 
     function note() {
@@ -362,7 +390,7 @@
         // Synced before and now gone: erased from another device, or the code was changed there.
         if (meta.version) {
           const gone = meta.code;
-          meta = null;
+          detach();
           if (site.code() === gone) site.clear();
           throw failure('erased', MESSAGES.erased);
         }
@@ -379,7 +407,7 @@
     let retryIn = 0, retryTimer = null;
     function run(job) {
       return serial(async () => {
-        if (!meta || !server) return;
+        if (!linked() || !server) return;
         tell('syncing');
         try {
           await job();
@@ -394,7 +422,7 @@
           if (o.onProblem) o.onProblem(shown);
           // Offline or rate-limited: try again by itself (15 s, doubling to 2 min) instead of
           // leaving this device's changes unsent until the page is next focused.
-          if (meta && (shown.reason === 'offline' || shown.reason === 'rate_limited')) {
+          if (linked() && (shown.reason === 'offline' || shown.reason === 'rate_limited')) {
             retryIn = Math.min(retryIn ? retryIn * 2 : 15000, 120000);
             clearTimeout(retryTimer);
             retryTimer = setTimeout(() => { api.sync().catch(() => {}); }, retryIn);
@@ -408,14 +436,15 @@
       return serial(async () => {
         const code = site.code();
         if (!code) {
-          if (meta) { meta = null; clearTimeout(timer); await persist(); tell('idle'); }
+          if (linked()) { detach(); clearTimeout(timer); pending = false; await persist(); tell('idle'); }
           return;
         }
         if (!adopt(code)) return;
         await persist();
         tell('idle');
-      }).then(() => (meta && server ? api.sync() : undefined));
+      }).then(() => (linked() && server ? api.sync() : undefined));
     }
+    function detach() { Object.assign(meta, { code: null, version: null, unapplied: false, syncedAt: null, dirty: true }); }
     // Follows the site's code and records what is on this device in the save, before any network
     // request: a change made in the first moment after opening is then kept even if the page is
     // closed straight away, and another page can send it. Returns whether anything changed.
@@ -440,19 +469,34 @@
         if (started) return;
         started = true;
         meta = (await idb.get(metaKey)) || null;
-        if (meta && !normalizeCode(meta.code)) meta = null;
-        const code = site.code();
+        if (meta && (!meta.doc || (meta.code && !normalizeCode(meta.code)))) meta = null;
+        const code = site.code() || null;
         if (code && adopt(code)) await persist();
-        else if (meta && meta.code === code && note()) { meta.dirty = true; await persist(); }
+        else if (meta && (meta.code || null) === code) { try { if (note()) { meta.dirty = true; await persist(); } } catch (e) { /* read later */ } }
         server = await available();
-        if (server && !server.apps.includes(o.app)) server = null;
+        if (server && !server.apps.includes(o.app)) { server = null; tell(phase); return; }
         tell(phase);
-        if (!server) return;
+        // Opened offline: wire up as soon as the site can be reached again, without a reload.
+        if (!server) await new Promise((resolve) => {
+          const again = async () => {
+            if (server) return;
+            server = await available();
+            if (!server) return;
+            root.removeEventListener('online', again); root.removeEventListener('focus', again); clearInterval(every);
+            resolve();
+          };
+          const every = setInterval(again, 30000);
+          root.addEventListener('online', again);
+          root.addEventListener('focus', again);
+        });
+        if (!server.apps.includes(o.app)) { server = null; tell(phase); return; }
+        tell(phase);
         remember();
+        if (linked()) keepStorage();
         site.onChange(() => { reconcile().catch(() => {}); });
         let last = 0;
         const go = () => {
-          if (document.hidden || !meta || Date.now() - last < 30000) return;
+          if (document.hidden || !linked() || Date.now() - last < 30000) return;
           last = Date.now();
           api.sync().catch(() => {});
         };
@@ -461,7 +505,7 @@
         // Back online: send what was saved while offline right away. A background tab still
         // receives this, and go() would skip it while the document is hidden.
         root.addEventListener('online', () => {
-          if (!meta) { last = 0; return; }
+          if (!linked()) { last = 0; return; }
           last = Date.now();
           api.sync().catch(() => {});
         });
@@ -469,7 +513,7 @@
         // Leaving the page or locking the phone: send a change still waiting out its delay now,
         // so it reaches the other devices without waiting for this one to be opened again.
         const flush = () => {
-          if (!pending || !meta) return;
+          if (!pending || !linked()) return;
           clearTimeout(timer);
           pending = false;
           run(() => push(3)).catch(() => {});
@@ -486,14 +530,15 @@
         if (applying) { missed = true; return; }
         if (!note()) return;
         persist();
+        if (!linked()) return;
         clearTimeout(timer);
         pending = true;
         timer = setTimeout(() => { pending = false; run(() => push(3)).catch(() => {}); }, o.delay == null ? 1500 : o.delay);
       },
-      sync() { return meta ? run(pull) : Promise.resolve(); },
+      sync() { return linked() ? run(pull) : Promise.resolve(); },
       // The document as last synced (for an app that keeps extra bookkeeping, like Loom's files).
-      doc() { return meta ? meta.doc : null; },
-      code() { return meta ? meta.code : null; },
+      doc() { return linked() ? meta.doc : null; },
+      code() { return linked() ? meta.code : null; },
     };
     return api;
   }
@@ -528,7 +573,7 @@
           if (meta.version) continue; // erased from another device: the app sorts that out itself
         } else if (cur.data.version !== meta.version) {
           // Another device changed it too: merge, the same way the app would.
-          doc = merge(meta.doc, await open(keys.key, cur.data.payload), Date.now());
+          doc = merge(meta.doc, await open(keys.key, cur.data.payload), clock());
           base = cur.data.version;
           unapplied = true;
         }
@@ -559,7 +604,7 @@
         const doc = found ? found.doc : emptyDoc();
         if (!doc.c) doc.c = {};
         const devices = (doc.c.devices = doc.c.devices || {});
-        devices[d.id] = { d: { name: d.name, seen: Math.floor(Date.now() / 60000) * 60000, apps: d.apps.slice(0, 10) }, t: Date.now() };
+        devices[d.id] = { d: { name: d.name, seen: Math.floor(clock() / 60000) * 60000, apps: d.apps.slice(0, 10) }, t: clock() };
         const r = await request(code, 'PUT', 'site', { payload: await seal(keys.key, doc), base: found ? found.version : null });
         if (r.status === 200) { ls.set(TOUCH_KEY, { code, at: Date.now() }); return; }
         if (r.status !== 409) return;
@@ -587,7 +632,7 @@
       if (!found) return;
       const devices = (found.doc.c && found.doc.c.devices) || {};
       if (!devices[id]) return;
-      devices[id] = { x: 1, t: Date.now() };
+      devices[id] = { x: 1, t: clock() };
       const r = await request(code, 'PUT', 'site', { payload: await seal(keys.key, found.doc), base: found.version });
       if (r.status === 200) return;
     }
@@ -649,13 +694,20 @@
     const code = newCode();
     const keys = await derive(code);
     const moved = [];
-    for (const app of s.apps.filter((a) => a !== 'site')) {
-      if (onProgress) onProgress(APP_NAMES[app] || app);
-      const found = await readDoc(old, app);
-      if (!found) continue;
-      const r = await request(code, 'PUT', app, { payload: await seal(keys.key, found.doc), base: null });
-      if (r.status !== 200) throw failure('offline', MESSAGES.offline);
-      moved.push(app);
+    try {
+      for (const app of s.apps.filter((a) => a !== 'site')) {
+        if (onProgress) onProgress(APP_NAMES[app] || app);
+        const found = await readDoc(old, app);
+        if (!found) continue;
+        const r = await request(code, 'PUT', app, { payload: await seal(keys.key, found.doc), base: null });
+        if (r.status !== 200) throw failure('offline', MESSAGES.offline);
+        moved.push(app);
+      }
+    } catch (e) {
+      // Stopped part-way (offline, or too many new saves from this network): nothing has changed
+      // yet, so take back the copies already made and keep the old code.
+      for (const app of moved) await request(code, 'DELETE', app).catch(() => {});
+      throw e && e.reason ? e : failure('offline', MESSAGES.offline);
     }
     site.set(code, 'rotate');
     await touchDevice(true);
@@ -736,7 +788,7 @@
 
   const since = (t) => {
     if (!t) return 'not yet';
-    const s = (Date.now() - t) / 1000;
+    const s = (clock() - t) / 1000;
     if (s < 60) return 'just now';
     if (s < 3600) return Math.floor(s / 60) + ' min ago';
     if (s < 86400) return Math.floor(s / 3600) + ' h ago';
@@ -893,6 +945,7 @@
           <div><p style="margin-bottom:10px">Point the other device’s camera at this code and open the link. It’s linked straight away, with nothing to sign up for.</p>
             <div class="row">${navigator.share ? '<button class="b p" type="button" data-a="share">Share link</button>' : ''}<button class="b" type="button" data-a="copy">Copy link</button></div></div>
         </div>
+        ${iosBrowser() ? '<p><small>On iPhone and iPad, add this site to your Home Screen (Share → Add to Home Screen). Safari can clear what a site saves after a week away, which would unlink this device.</small></p>' : ''}
         <details><summary>Type the code instead</summary><p><code>${esc(formatCode(code))}</code></p><p><small>Anyone with this code or link can see and change your saves. Keep it like a password.</small></p></details>
         <h3>Linked devices</h3>
         <ul data-devices><li><small>Loading…</small></li></ul>
