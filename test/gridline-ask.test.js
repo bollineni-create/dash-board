@@ -59,3 +59,22 @@ test('gridline ask: readJson takes the object out of extra text and fails loudly
   assert.deepEqual(readJson(r('Here you go: {"makes":["Toyota"]} done')), { makes: ['Toyota'] });
   assert.throws(() => readJson(r('{"models":[{"make":"Toyota"')));
 });
+
+test('gridline ask: models come back as their base name, so listings match', async () => {
+  const { baseModel } = await import('../api/gridline.js');
+  assert.equal(baseModel('Model 3 Long Range'), 'Model 3');
+  assert.equal(baseModel('RAV4 Hybrid'), 'RAV4');
+  assert.equal(baseModel('Prius Prime'), 'Prius');
+  assert.equal(baseModel('Equinox EV'), 'Equinox EV');
+  assert.equal(baseModel('F-150 Lightning'), 'F-150 Lightning');
+  assert.equal(baseModel('Ioniq 6'), 'Ioniq 6');
+  assert.equal(baseModel('Sport'), 'Sport');
+  const s = sanitize({ models: [{ make: 'Toyota', model: 'RAV4 Hybrid' }, { make: 'Toyota', model: 'RAV4' }] });
+  assert.deepEqual(s.models, [{ make: 'Toyota', model: 'RAV4' }]);
+});
+
+test('gridline ask: real model names that end in a trim-like word survive', async () => {
+  const { baseModel } = await import('../api/gridline.js');
+  assert.equal(baseModel('Range Rover Sport'), 'Range Rover Sport');
+  assert.equal(baseModel('Model Y Performance'), 'Model Y');
+});
