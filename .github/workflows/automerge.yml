@@ -1,16 +1,19 @@
-# Merges a pull request on its own once Cursor has approved it and every check and status has passed.
-# Cursor reviews each PR (Bugbot, the security reviewer and the approval agent). If it asks
-# for changes or pushes a fix, nothing merges until it approves the newest commit.
-name: Auto-merge after Cursor approves
-# Every trigger runs the copy of this file on the default branch, never a PR's own copy,
-# so a PR cannot edit this workflow to merge itself. Cursor's check suite finishing wakes
-# this up (and the run then waits for Cursor's decision); the 10-minute schedule catches a
-# decision that lands later. Scheduled runs are free on this public repository. There is no
-# manual-run trigger on purpose: workflow_dispatch runs the copy on whichever branch is picked,
-# so a PR could edit this file and dispatch its own copy.
+# Merges a pull request on its own once Claude Review has approved its newest commit and every
+# other check and status has passed. Claude Review (.github/workflows/claude-review.yml) replaced
+# Cursor on Nov 30, 2026, when the xAI Super plan that bundled Cursor ended.
+name: Auto-merge after Claude Review approves
+# Every trigger runs the copy of this file on the default branch, never a PR's own copy, so a PR
+# cannot edit this workflow to merge itself. Claude Review runs from the PR's own branch, so this job
+# never merges a PR that changes anything under .github/: those wait for Naren. Claude Review or CI
+# finishing wakes this up (workflow_run always runs the default branch's copy), as does a finished
+# check suite or a status (Vercel); the schedule sweeps up anything those miss. There is no manual-run
+# trigger on purpose: workflow_dispatch runs the copy on whichever branch is picked.
 on:
   pull_request_target:
     types: [ready_for_review]
+  workflow_run:
+    workflows: ["Claude Review", "CI"]
+    types: [completed]
   check_suite:
     types: [completed]
   status: {}
@@ -29,11 +32,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # Gates that must report success on the PR's newest commit, as "name@source": a check
-      # run from that GitHub App (github-actions, cursor), or "@status:<app>" for a commit status
-      # posted by that app's bot account (e.g. Vercel@status:vercel means vercel[bot]).
-      # A required gate that hasn't reported counts as pending; neutral or skipped is a fail.
-      REQUIRED_CHECKS: "Vercel@status:vercel, Cursor Bugbot@cursor, Cursor Security Agent: Security Reviewer@cursor"
+      # Gates that must report success on the PR's newest commit, as "name@source": a check run
+      # from that GitHub App (github-actions), or "@status:<app>" for a commit status posted by that
+      # app's bot account (e.g. Vercel@status:vercel means vercel[bot]). A required gate that hasn't
+      # reported counts as pending; neutral or skipped is a fail.
+      REQUIRED_CHECKS: "Vercel@status:vercel, Claude Review@github-actions"
     steps:
       - uses: actions/github-script@v7
         with:
@@ -42,13 +45,6 @@ jobs:
             const OK = ['success', 'neutral', 'skipped'];
             const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean)
               .map((spec) => { const at = spec.lastIndexOf('@'); return { name: spec.slice(0, at), source: spec.slice(at + 1) }; });
-            const AGENT = 'Cursor Approval Agent: Pull Request Router and Approver';
-            const suite = context.eventName === 'check_suite' ? context.payload.check_suite : null;
-            // Cursor's approval agent posts its decision up to several minutes after its check run
-            // completes (it waits for Bugbot first). When Cursor's suite for a PR's newest commit wakes
-            // this job, keep reading reviews for up to this long for its decision on that commit.
-            const DECISION_WAIT_MS = 9 * 60 * 1000;
-            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
             // Never check out or run the PR's code here: this job holds a write token.
             const candidates = context.payload.pull_request
               ? [context.payload.pull_request]
@@ -59,30 +55,15 @@ jobs:
               if (pr.head.repo.full_name !== `${owner}/${repo}`) continue; // never merge forks
               const sha = pr.head.sha;
 
-              // Cursor's newest verdict (an approval, a change request, or its approval agent's
-              // "Not approved" comment) must be an approval of this exact commit. An approval of an
-              // older commit never counts: the agent doesn't always re-decide after a push, and its
-              // check run completing says nothing about when its decision lands. A review can't wake
-              // this job safely (pull_request_review would run the PR's own copy of this file), so when
-              // Cursor's suite for this commit woke us we wait here for the decision, and the schedule above sweeps up any that land later.
-              const fromAgent = (r) => /Sent by Cursor Approval Agent/.test(r.body || '');
-              const cursorVerdict = async () => {
-                const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
-                return reviews.filter((r) => r.user?.login === 'cursor[bot]' && (['APPROVED', 'CHANGES_REQUESTED'].includes(r.state) || fromAgent(r))).pop();
-              };
-              let verdict = await cursorVerdict();
-              if (suite?.app?.slug === 'cursor' && suite.head_sha === sha) {
-                for (const until = Date.now() + DECISION_WAIT_MS; verdict?.commit_id !== sha && Date.now() < until;) {
-                  await sleep(20000);
-                  verdict = await cursorVerdict();
-                }
-              }
-              if (verdict?.state !== 'APPROVED' || verdict.commit_id !== sha) {
-                core.info(`#${number}: waiting for Cursor to approve ${sha.slice(0, 7)}`);
+              // Claude Review runs from the PR's branch, so a PR could weaken it. Anything that
+              // touches .github/ (workflows, the review prompt) needs Naren's merge.
+              const files = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: number, per_page: 100 });
+              if (files.some((f) => f.filename.startsWith('.github/') || (f.previous_filename || '').startsWith('.github/'))) {
+                core.info(`#${number}: changes .github/, waiting for Naren to merge`);
                 continue;
               }
 
-              // Every other check on that commit must have finished green.
+              // Every check on that commit must have finished green, Claude Review included.
               const runs = (await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, per_page: 100 }))
                 .filter((r) => r.name !== 'auto-merge');
               const pending = runs.filter((r) => r.status !== 'completed').map((r) => r.name);
