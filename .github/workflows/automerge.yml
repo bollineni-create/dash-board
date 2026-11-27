@@ -1,26 +1,31 @@
-# Merges a pull request on its own once Cursor has approved it and every check and status has passed.
-# Cursor reviews each PR (Bugbot, the security reviewer and the approval agent). If it asks
-# for changes or pushes a fix, nothing merges until it approves the newest commit.
-name: Auto-merge after Cursor approves
-# Every trigger runs the copy of this file on the default branch, never a PR's own copy,
-# so a PR cannot edit this workflow to merge itself. Cursor's check suite finishing wakes
-# this up (and the run then waits for Cursor's decision); the 10-minute schedule catches a
-# decision that lands later. Scheduled runs are free on this public repository. There is no
-# manual-run trigger on purpose: workflow_dispatch runs the copy on whichever branch is picked,
-# so a PR could edit this file and dispatch its own copy.
+# Merges a pull request on its own once Claude Review has approved its newest commit and every
+# other check and status has passed. Claude Review (.github/workflows/claude-review.yml) replaced
+# Cursor on Nov 30, 2026, when the xAI Super plan that bundled Cursor ended.
+name: Auto-merge after Claude Review approves
+# Every trigger runs the copy of this file on the default branch, never a PR's own copy, so a PR
+# can't edit this workflow to merge itself. The same holds for Claude Review (pull_request_target),
+# and this job only trusts a successful run of the default branch's claude-review.yml for the PR's
+# exact newest commit, so a PR can't fake an approval either.
+#
+# Event-driven: Claude Review or CI finishing (workflow_run, which also runs the default branch's
+# copy) and Vercel's status wake this up. The schedule is only a backstop for a missed event; it runs
+# every six hours to keep Actions minutes near zero on private repos. There is no manual-run trigger
+# on purpose: workflow_dispatch runs the copy on whichever branch is picked.
 on:
   pull_request_target:
     types: [ready_for_review]
-  check_suite:
+  workflow_run:
+    workflows: ["Claude Review", "CI"]
     types: [completed]
   status: {}
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "23 */6 * * *"
 permissions:
   contents: write
   pull-requests: write
   checks: read
   statuses: read
+  actions: read
 concurrency:
   group: auto-merge
   cancel-in-progress: false
@@ -29,56 +34,50 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # Gates that must report success on the PR's newest commit, as "name@source": a check
-      # run from that GitHub App (github-actions, cursor), or "@status:<app>" for a commit status
-      # posted by that app's bot account (e.g. Vercel@status:vercel means vercel[bot]).
-      # A required gate that hasn't reported counts as pending; neutral or skipped is a fail.
-      REQUIRED_CHECKS: "Vercel@status:vercel, Cursor Bugbot@cursor, Cursor Security Agent: Security Reviewer@cursor"
+      # Other gates that must report success on the PR's newest commit, as "name@source": a check run
+      # from that GitHub App (github-actions), or "@status:<app>" for a commit status posted by that
+      # app's bot account (e.g. Vercel@status:vercel means vercel[bot]). A required gate that hasn't
+      # reported counts as pending; neutral or skipped is a fail. Claude Review is checked separately.
+      REQUIRED_CHECKS: "Vercel@status:vercel"
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
             const OK = ['success', 'neutral', 'skipped'];
+            const REVIEW = '.github/workflows/claude-review.yml';
             const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean)
               .map((spec) => { const at = spec.lastIndexOf('@'); return { name: spec.slice(0, at), source: spec.slice(at + 1) }; });
-            const AGENT = 'Cursor Approval Agent: Pull Request Router and Approver';
-            const suite = context.eventName === 'check_suite' ? context.payload.check_suite : null;
-            // Cursor's approval agent posts its decision up to several minutes after its check run
-            // completes (it waits for Bugbot first). When Cursor's suite for a PR's newest commit wakes
-            // this job, keep reading reviews for up to this long for its decision on that commit.
-            const DECISION_WAIT_MS = 9 * 60 * 1000;
-            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
             // Never check out or run the PR's code here: this job holds a write token.
             const candidates = context.payload.pull_request
               ? [context.payload.pull_request]
               : await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+            if (!candidates.length) return;
+            // Newest Claude Review runs, started by pull_request_target from the default branch's file.
+            let reviewRuns = [];
+            try {
+              ({ data: { workflow_runs: reviewRuns } } = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: 'claude-review.yml', event: 'pull_request_target', per_page: 100 }));
+            } catch (err) {
+              core.warning(`Can't read Claude Review runs, merging nothing: ${err.message}`);
+              return;
+            }
             for (const { number } of candidates) {
               const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
               if (pr.state !== 'open' || pr.draft || pr.base.ref !== pr.base.repo.default_branch) continue;
               if (pr.head.repo.full_name !== `${owner}/${repo}`) continue; // never merge forks
               const sha = pr.head.sha;
 
-              // Cursor's newest verdict (an approval, a change request, or its approval agent's
-              // "Not approved" comment) must be an approval of this exact commit. An approval of an
-              // older commit never counts: the agent doesn't always re-decide after a push, and its
-              // check run completing says nothing about when its decision lands. A review can't wake
-              // this job safely (pull_request_review would run the PR's own copy of this file), so when
-              // Cursor's suite for this commit woke us we wait here for the decision, and the schedule above sweeps up any that land later.
-              const fromAgent = (r) => /Sent by Cursor Approval Agent/.test(r.body || '');
-              const cursorVerdict = async () => {
-                const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
-                return reviews.filter((r) => r.user?.login === 'cursor[bot]' && (['APPROVED', 'CHANGES_REQUESTED'].includes(r.state) || fromAgent(r))).pop();
-              };
-              let verdict = await cursorVerdict();
-              if (suite?.app?.slug === 'cursor' && suite.head_sha === sha) {
-                for (const until = Date.now() + DECISION_WAIT_MS; verdict?.commit_id !== sha && Date.now() < until;) {
-                  await sleep(20000);
-                  verdict = await cursorVerdict();
-                }
+              // Claude Review must have approved this exact commit. Its run name ends with the commit
+              // it reviewed, and only a pull_request_target run of the default branch's file counts.
+              const review = reviewRuns.find((r) => r.event === 'pull_request_target'
+                && (r.path || '').startsWith(REVIEW) && (r.display_title || '').endsWith(sha));
+              if (!review || review.status !== 'completed') {
+                core.info(`#${number}: waiting for Claude Review of ${sha.slice(0, 7)}`);
+                continue;
               }
-              if (verdict?.state !== 'APPROVED' || verdict.commit_id !== sha) {
-                core.info(`#${number}: waiting for Cursor to approve ${sha.slice(0, 7)}`);
+              if (review.conclusion !== 'success') {
+                core.info(`#${number}: Claude Review did not approve ${sha.slice(0, 7)} (${review.conclusion})`);
                 continue;
               }
 
@@ -112,7 +111,6 @@ jobs:
                 else if (mine.some((r) => r.status !== 'completed')) pending.push(name);
                 else if (mine.some((r) => r.conclusion !== 'success')) failed.push(`${name} (${mine.map((r) => r.conclusion).join('/')})`);
               }
-              if (!runs.length && !combined.statuses.length) pending.push('no checks reported yet');
               if (pending.length || failed.length) {
                 core.info(`#${number}: pending [${pending.join(', ')}] failed [${failed.join(', ')}]`);
                 continue;
