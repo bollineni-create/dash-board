@@ -549,6 +549,25 @@
   // (the phone locked, the tab switched) any page on the site can send it: the document is already
   // complete and encrypted here. If another device changed the same app meanwhile, it is left for
   // the app itself to merge the next time it opens.
+  // Gridline keeps its own engine, with its save in localStorage. Its unsent change is sent only
+  // when nothing else changed it meanwhile; otherwise Gridline merges it itself when next opened.
+  const GRIDLINE_KEY = 'gridline:sync';
+  async function flushGridline(code) {
+    const get = () => { try { return JSON.parse(localStorage.getItem(GRIDLINE_KEY) || 'null'); } catch (e) { return null; } };
+    const m = get();
+    if (!m || !m.dirty || m.code !== code || !m.version || !m.doc || !m.savedAt || Date.now() - m.savedAt < 5000) return;
+    const keys = await derive(code);
+    const payload = await seal(keys.key, m.doc);
+    if (payload.length > 380000) return;
+    const cur = await request(code, 'GET', 'gridline');
+    if (cur.status !== 200 || cur.data.version !== m.version) return;
+    const r = await request(code, 'PUT', 'gridline', { payload, base: m.version });
+    if (r.status !== 200) return;
+    const now = get();
+    if (!now || now.savedAt !== m.savedAt) return; // Gridline saved again meanwhile: it sends that itself
+    try { localStorage.setItem(GRIDLINE_KEY, JSON.stringify(Object.assign(now, { version: r.data.version, dirty: false, syncedAt: Date.now() }))); } catch (e) { /* full */ }
+  }
+
   let flushing = null;
   function flushOthers() {
     if (!flushing) flushing = flushOthersNow().catch(() => {}).finally(() => { flushing = null; });
@@ -560,7 +579,8 @@
     if (!code || !s) return;
     const running = new Set([...engines].map((e) => e.engine.app));
     for (const app of s.apps) {
-      if (app === 'site' || app === 'gridline' || running.has(app)) continue;
+      if (app === 'site' || running.has(app)) continue;
+      if (app === 'gridline') { await flushGridline(code).catch(() => {}); continue; }
       const meta = await idb.get('app:' + app);
       // Left alone: nothing unsent, another code, or saved in the last few seconds (the app may be
       // open in another tab or frame right now and sending it itself).
