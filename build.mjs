@@ -8,10 +8,11 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, ex
 import { extname } from 'node:path';
 import { stampAssets } from './lib/stamp-assets.js';
 import { iconFit } from './lib/icon-fit.js';
+import { installTelemetry, telemetryConfig } from './lib/telemetry.js';
 
 const OUT = 'public', SRC = '.src';
 // Folders the site already uses, and the front page's own anchors (bollineni.co/#apps): an app's id is its address and its #link.
-const RESERVED = new Set(['api', 'icons', 'legal', 'apps', 'fonts', 'top', 'main', 'record', 'experience', 'research', 'education', 'leadership']);
+const RESERVED = new Set(['api', 'icons', 'vendor', 'legal', 'apps', 'fonts', 'top', 'main', 'record', 'experience', 'research', 'education', 'leadership']);
 const apps = JSON.parse(readFileSync('apps.json', 'utf8'));
 const lock = existsSync('apps.lock.json') ? JSON.parse(readFileSync('apps.lock.json', 'utf8')) : {};
 
@@ -148,5 +149,10 @@ writeFileSync(homePath, home
 // /apps was the launcher's own page. It now forwards to the front page, keeping any #app link.
 const oldPath = `${OUT}/apps/index.html`;
 writeFileSync(oldPath, readFileSync(oldPath, 'utf8').replaceAll('{{APP_NAMES}}', esc(shelf.map((a) => a.name).join(', '))));
+
+// PostHog and Sentry on every page, once their keys are in the project's settings (lib/telemetry.js).
+const telemetry = telemetryConfig();
+const tagged = installTelemetry(OUT, telemetry);
+console.log(`Telemetry: PostHog ${telemetry.posthog ? 'on' : 'off'}, Sentry ${telemetry.sentry ? 'on' : 'off'}${tagged ? ` (${tagged} pages)` : ''}`);
 
 console.log(`Built ${shelf.length} apps: ${shelf.map((a) => a.id).join(', ')}`);
