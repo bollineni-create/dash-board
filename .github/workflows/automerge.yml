@@ -3,27 +3,29 @@
 # Cursor on Nov 30, 2026, when the xAI Super plan that bundled Cursor ended.
 name: Auto-merge after Claude Review approves
 # Every trigger runs the copy of this file on the default branch, never a PR's own copy, so a PR
-# cannot edit this workflow to merge itself. Claude Review runs from the PR's own branch, so this job
-# never merges a PR that changes anything under .github/: those wait for Naren. Claude Review or CI
-# finishing wakes this up (workflow_run always runs the default branch's copy), as does a finished
-# check suite or a status (Vercel); the schedule sweeps up anything those miss. There is no manual-run
-# trigger on purpose: workflow_dispatch runs the copy on whichever branch is picked.
+# can't edit this workflow to merge itself. The same holds for Claude Review (pull_request_target),
+# and this job only trusts a successful run of the default branch's claude-review.yml for the PR's
+# exact newest commit, so a PR can't fake an approval either.
+#
+# Event-driven: Claude Review or CI finishing (workflow_run, which also runs the default branch's
+# copy) and Vercel's status wake this up. The schedule is only a backstop for a missed event; it runs
+# every six hours to keep Actions minutes near zero on private repos. There is no manual-run trigger
+# on purpose: workflow_dispatch runs the copy on whichever branch is picked.
 on:
   pull_request_target:
     types: [ready_for_review]
   workflow_run:
     workflows: ["Claude Review", "CI"]
     types: [completed]
-  check_suite:
-    types: [completed]
   status: {}
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "23 */6 * * *"
 permissions:
   contents: write
   pull-requests: write
   checks: read
   statuses: read
+  actions: read
 concurrency:
   group: auto-merge
   cancel-in-progress: false
@@ -32,38 +34,54 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # Gates that must report success on the PR's newest commit, as "name@source": a check run
+      # Other gates that must report success on the PR's newest commit, as "name@source": a check run
       # from that GitHub App (github-actions), or "@status:<app>" for a commit status posted by that
       # app's bot account (e.g. Vercel@status:vercel means vercel[bot]). A required gate that hasn't
-      # reported counts as pending; neutral or skipped is a fail.
-      REQUIRED_CHECKS: "Vercel@status:vercel, Claude Review@github-actions"
+      # reported counts as pending; neutral or skipped is a fail. Claude Review is checked separately.
+      REQUIRED_CHECKS: "Vercel@status:vercel"
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
             const OK = ['success', 'neutral', 'skipped'];
+            const REVIEW = '.github/workflows/claude-review.yml';
             const REQUIRED = (process.env.REQUIRED_CHECKS || '').split(',').map((n) => n.trim()).filter(Boolean)
               .map((spec) => { const at = spec.lastIndexOf('@'); return { name: spec.slice(0, at), source: spec.slice(at + 1) }; });
             // Never check out or run the PR's code here: this job holds a write token.
             const candidates = context.payload.pull_request
               ? [context.payload.pull_request]
               : await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+            if (!candidates.length) return;
+            // Newest Claude Review runs, started by pull_request_target from the default branch's file.
+            let reviewRuns = [];
+            try {
+              ({ data: { workflow_runs: reviewRuns } } = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: 'claude-review.yml', event: 'pull_request_target', per_page: 100 }));
+            } catch (err) {
+              core.warning(`Can't read Claude Review runs, merging nothing: ${err.message}`);
+              return;
+            }
             for (const { number } of candidates) {
               const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
               if (pr.state !== 'open' || pr.draft || pr.base.ref !== pr.base.repo.default_branch) continue;
               if (pr.head.repo.full_name !== `${owner}/${repo}`) continue; // never merge forks
               const sha = pr.head.sha;
 
-              // Claude Review runs from the PR's branch, so a PR could weaken it. Anything that
-              // touches .github/ (workflows, the review prompt) needs Naren's merge.
-              const files = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: number, per_page: 100 });
-              if (files.some((f) => f.filename.startsWith('.github/') || (f.previous_filename || '').startsWith('.github/'))) {
-                core.info(`#${number}: changes .github/, waiting for Naren to merge`);
+              // Claude Review must have approved this exact commit. Its run name ends with the commit
+              // it reviewed, and only a pull_request_target run of the default branch's file counts.
+              const review = reviewRuns.find((r) => r.event === 'pull_request_target'
+                && (r.path || '').startsWith(REVIEW) && (r.display_title || '').endsWith(sha));
+              if (!review || review.status !== 'completed') {
+                core.info(`#${number}: waiting for Claude Review of ${sha.slice(0, 7)}`);
+                continue;
+              }
+              if (review.conclusion !== 'success') {
+                core.info(`#${number}: Claude Review did not approve ${sha.slice(0, 7)} (${review.conclusion})`);
                 continue;
               }
 
-              // Every check on that commit must have finished green, Claude Review included.
+              // Every other check on that commit must have finished green.
               const runs = (await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: sha, per_page: 100 }))
                 .filter((r) => r.name !== 'auto-merge');
               const pending = runs.filter((r) => r.status !== 'completed').map((r) => r.name);
@@ -93,7 +111,6 @@ jobs:
                 else if (mine.some((r) => r.status !== 'completed')) pending.push(name);
                 else if (mine.some((r) => r.conclusion !== 'success')) failed.push(`${name} (${mine.map((r) => r.conclusion).join('/')})`);
               }
-              if (!runs.length && !combined.statuses.length) pending.push('no checks reported yet');
               if (pending.length || failed.length) {
                 core.info(`#${number}: pending [${pending.join(', ')}] failed [${failed.join(', ')}]`);
                 continue;
