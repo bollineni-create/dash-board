@@ -20,7 +20,7 @@
   <nav><a href="/apps">bollineni.co</a><a href="/legal/privacy" aria-current="page">Privacy</a><a href="/legal/terms">Terms</a></nav>
 
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated October 28, 2026</p>
+  <p class="updated">Last updated November 27, 2026</p>
 
   <p>This policy covers bollineni.co and every app published on it or on a bollineni.co subdomain (together, the "apps"). The apps are run by Bollineni Consulting LLC ("we", "us"). We collect as little as we can, use it only to run the apps, and never sell it.</p>
 
@@ -29,7 +29,7 @@
     <li><strong>Account details.</strong> If you sign in with Google or an email link, we receive your name, email address and profile picture. We do not receive your Google password or access to anything else in your Google account.</li>
     <li><strong>Payment details.</strong> Payments are handled by Stripe. We see what you bought, when, and your billing email. Your card number goes to Stripe, never to us.</li>
     <li><strong>What you put into an app.</strong> Text, settings and files you enter. Many apps keep this only in your browser on your device. Apps with accounts store it in our database so it follows you between devices.</li>
-    <li><strong>Usage and technical data.</strong> Page views, device and browser type, and approximate country, collected through Vercel Analytics without advertising cookies. Our host keeps standard server logs, including IP addresses, for security and troubleshooting.</li>
+    <li><strong>Usage and technical data.</strong> Page views, device and browser type, and approximate country, collected through Vercel Analytics without advertising cookies. We also use PostHog to see how people use each app, including session replays in which anything you type is hidden, and Sentry to receive reports when something breaks. Neither is used for advertising, and PostHog respects your browser’s Do Not Track setting. Our host keeps standard server logs, including IP addresses, for security and troubleshooting.</li>
   </ul>
 
   <h2>How we use it</h2>
@@ -44,6 +44,8 @@
   <p>We share only what each service needs to do its job:</p>
   <ul>
     <li><strong>Vercel</strong>: hosting and analytics</li>
+    <li><strong>PostHog</strong>: product analytics and session replays</li>
+    <li><strong>Sentry</strong>: error reports</li>
     <li><strong>Neon</strong>: database for apps with accounts</li>
     <li><strong>Google</strong>: sign-in</li>
     <li><strong>Stripe</strong>: payments</li>
